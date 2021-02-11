@@ -1,6 +1,6 @@
 import collections.abc as abc
 
-from .base import DFACCTOAssert, IndexWrapper
+from .util import DFACCTOAssert, IndexWrapper
 from .common import Typed, Sized, Connectable, Instantiable, EntityElement
 
 

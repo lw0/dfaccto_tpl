@@ -1,4 +1,4 @@
-from .base import DFACCTOError, DFACCTOAssert, Seq, IndexWrapper, Registry
+from .util import DFACCTOError, DFACCTOAssert, Seq, IndexWrapper, Registry
 from .context import Context
 from .package import Package
 from .entity import Entity#, InstEntity

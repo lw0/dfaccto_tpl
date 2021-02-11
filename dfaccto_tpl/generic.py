@@ -1,4 +1,4 @@
-from .base import ValueContainer
+from .util import ValueContainer
 from .common import Instantiable, EntityElement
 
 

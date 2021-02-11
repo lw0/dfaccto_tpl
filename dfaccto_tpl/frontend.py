@@ -1,7 +1,7 @@
 import collections.abc as abc
 import re
 
-from .base import DFACCTOAssert
+from .util import DFACCTOAssert
 from .role import Role
 from .type import Type
 from .entity import Entity

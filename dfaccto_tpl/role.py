@@ -1,7 +1,7 @@
 from copy import copy
 from enum import Enum
 
-from .base import DFACCTOError
+from .util import DFACCTOError
 
 
 class Role(Enum):

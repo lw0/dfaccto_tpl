@@ -1,81 +1,40 @@
 import argparse
 from itertools import chain
 from pathlib import Path
-import pystache
 import sys
+import shutil
 import traceback
 
-from . import DFACCTOError, Role, Seq, Context, Frontend
-
-
-def load_templates(tpl_path, suffix):
-  templates = dict()
-  for tpl_file in tpl_path.rglob('*{}.tpl'.format(suffix)):
-    name = str(tpl_file.relative_to(tpl_path))[:-4]
-    template = pystache.parse(tpl_file.read_text())
-    templates[name] = template
-  return templates
-
-
-class Executor:
-  def __init__(self, context):
-    self._frontend = Frontend(context)
-    self._globals = {
-      'Inc': self._execute,
-      'Simple': Role.Simple,
-      'Complex': Role.Complex,
-      'Seq': Seq,
-      'Gbl': self._frontend.Gbl,
-      'Pkg': self._frontend.Pkg,
-      'Ent': self._frontend.Ent }
-    self._executed = set()
-    self._base_path = list()
-
-  def execute(self, path):
-    self._base_path[:] = (path.parent,)
-    self._execute(path.name)
-
-  def _execute(self, name):
-    path = self._base_path[-1] / name
-    if path in self._executed:
-      return
-    self._executed.add(path)
-    self._base_path.append(path.parent)
-    code = compile(path.read_text(), path, 'exec')
-    exec(code, self._globals)
-    self._base_path.pop()
+from .configreader import ConfigReader
+from .contextrenderer import ContextRenderer
+from .util import DFACCTOError
 
 
 def main(args):
-  templates = load_templates(args.tpldir, '.vhd')
-  partials = load_templates(args.tpldir, '.part')
+  try:
+    reader = ConfigReader()
+    reader.read(args.config)
 
-  context = Context()
+    context = reader.context
+    if args.debug:
+      breakpoint()
 
-  executor = Executor(context)
-  executor.execute(args.config)
-  # try:
-  #   exec(script, globals)
-  # except DFACCTOError:
-  #   e_type,e_msg,e_tb = sys.exc_info()
-  #   e_trace = traceback.extract_tb(e_tb)
-  #   print('DFACCTOError: {}'.format(e_msg), file=sys.stderr)
-  #   print(' at [{}:{}] "{}"'.format(os.path.relpath(e_trace[1][0]), e_trace[1][1], e_trace[1][3]), file=sys.stderr)
-  #   sys.exit(1)
+    renderer = ContextRenderer(args.outdir)
+    renderer.load_templates(args.tpldir, '.tpl', '.part')
 
-  if args.debug:
-    breakpoint()
-
-  renderer = pystache.Renderer(partials=partials, escape=lambda s: s)
-
-  element_iter = chain((context,), context.packages.contents(), context.entities.contents())
-  for element in element_iter:
-    for tpl_name,out_name in element.props.get('templates', {}).items():
-      template = templates[tpl_name] # TODO-lw handle potential KeyError
-      path = args.outdir / (out_name or tpl_name)
-      path.parent.mkdir(parents=True, exist_ok=True)
-      print('Render "{}" ({}) -> "{}"'.format(tpl_name, element, path))
-      path.write_text(renderer.render(template, context, element))
+    element_iter = chain((context,), context.packages.contents(), context.entities.contents())
+    for element in element_iter:
+      for tpl_name,out_name in element.props.get('templates', {}).items():
+        print('Rendering "{}" --{}:{}--> "{}"'.format(tpl_name, type(element).__name__, element, out_name or tpl_name))
+        renderer.render(tpl_name, element, out_name)
+  except DFACCTOError as e:
+    print(e, file=sys.stderr)
+    return 1
+  except Exception as e:
+    print('Unexpected error:', file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+    return 1
+  return 0
 
 
 def arg_dir(arg):
@@ -94,7 +53,10 @@ def arg_emptydir(arg):
     raise argparse.ArgumentTypeError(msg)
   else:
     for f in path.iterdir():
-      f.unlink()
+      if f.is_dir():
+        shutil.rmtree(f)
+      else:
+        f.unlink()
   return path
 
 def arg_file(arg):
@@ -105,10 +67,16 @@ def arg_file(arg):
   return path
 
 if __name__ == "__main__":
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--tpldir', type=arg_dir)
-  parser.add_argument('--outdir', type=arg_emptydir)
-  parser.add_argument('--config', type=arg_file)
-  parser.add_argument('--debug', action='store_true')
-  main(parser.parse_args())
+  parser = argparse.ArgumentParser(
+      prog='dfaccto_tpl',
+      description='Build a data model from a config script and use it to render templates')
+  parser.add_argument('--tpldir', required=True, type=arg_dir,
+      help='Search for templates (*.tpl) and partials (*.part.tpl) here')
+  parser.add_argument('--outdir', required=True, type=arg_emptydir,
+      help='Place generated files here (WARNING: deletes existing content!)')
+  parser.add_argument('--config', required=True, type=arg_file,
+      help='Read this Python script to build the data model')
+  parser.add_argument('--debug', action='store_true',
+      help='Enter debugger after script is read')
+  sys.exit(main(parser.parse_args()))
 

@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from .base import DFACCTOError, DFACCTOAssert, ValueContainer, IndexedObj
+from .util import DFACCTOError, DFACCTOAssert, ValueContainer, IndexedObj
 
 
 class Element:

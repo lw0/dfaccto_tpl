@@ -1,4 +1,4 @@
-from .base import Registry
+from .util import Registry
 from .signal import Signal
 from .port import Port
 from .generic import Generic

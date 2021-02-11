@@ -1,4 +1,4 @@
-from .base import Registry
+from .util import Registry
 from .common import Element
 
 
