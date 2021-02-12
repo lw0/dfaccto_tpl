@@ -1,31 +1,20 @@
-from .util import Registry
+from .util import Registry, IndexWrapper
 from .signal import Signal
 from .port import Port
 from .generic import Generic
-from .common import Instantiable, Element
+from .common import Instantiable, Element, HasProps
 
 
-class EntityCommon:
+class EntityCommon(HasProps):
   def __init__(self, props):
-    self._props = props
+    HasProps.__init__(self, props)
 
-    self._ports = Registry()
-    self._generics = Registry()
-    self._instances = Registry()
-    self._signals = Registry()
-    self._connectables = Registry()
+    self._ports = Registry('port')
+    self._generics = Registry('generic')
+    self._instances = Registry('instance')
+    self._signals = Registry('signal')
+    self._connectables = Registry('connectable')
     self._identifiers = Registry()
-
-
-  @property
-  def props(self):
-    return self._props
-
-  def __getattr__(self, key):
-    if key.startswith('x_') and key[2:] in self._props:
-      return self._props[key[2:]]
-    else:
-      raise AttributeError(key)
 
 
   @property
@@ -67,6 +56,13 @@ class EntityCommon:
   @property
   def connectables(self):
     return self._connectables
+
+  @property
+  def used_types(self):
+    types = set()
+    for conn in self._connectables.contents():
+      types.add(conn.type.base)
+    return IndexWrapper(types, 'type')
 
 
   @property

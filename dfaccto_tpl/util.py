@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import collections.abc as abc
 
 
 
@@ -20,57 +21,67 @@ def Seq(*items, f):
 
 
 class IndexedObj():
-  def __init__(self, obj, idx, len):
+  def __init__(self, obj, idx, len, name=None):
     self._obj = obj
     self._idx = idx
     self._len = len
+    self._name = name
 
   def __getattr__(self, key):
+    if self._name is not None and self._name == key:
+      return self._obj
     try:
       return self._obj[key]
     except TypeError:
       pass
     except KeyError:
       pass
-    return getattr(self._obj, key)
+    if hasattr(self._obj, key):
+      return getattr(self._obj, key)
+    else:
+      raise AttributeError
 
-  #TODO-lw @property
+  @property
   def _last(self):
     return self._idx == (self._len - 1)
 
+  @property
   def _first(self):
     return self._idx == 0
 
 
 class IndexWrapper():
-  def __init__(self, lst):
+  def __init__(self, lst, name=None):
     self._iter = iter(lst)
     self._lst = lst
     self._idx = 0
+    self._name = name
 
   def __iter__(self):
     return self
 
   def __next__(self):
-    item = IndexedObj(next(self._iter), self._idx, len(self._lst))
+    item = IndexedObj(next(self._iter), self._idx, len(self._lst), self._name)
     self._idx += 1
     return item
 
+  @property
   def _len(self):
     return len(self._lst)
 
 
-class Registry():
-  def __init__(self):
+class Registry(abc.Iterable):
+  def __init__(self, name=None):
     self.map = OrderedDict()
     self.idx_cache = {}
+    self._name = name
 
   def clear(self):
     self.map.clear()
     self.idx_cache.clear()
 
   def __iter__(self):
-    return IndexWrapper(self.map.values())
+    return IndexWrapper(self.map.values(), self._name)
 
   def __len__(self):
     return len(self.map)

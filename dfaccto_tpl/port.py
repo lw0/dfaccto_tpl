@@ -67,7 +67,7 @@ class InstPort(Typed, Sized, Instantiable, EntityElement):
   @property
   def connections(self):
     if isinstance(self._connection, abc.Sequence):
-      return IndexWrapper(self._connection)
+      return IndexWrapper(self._connection, 'connection')
     return None
 
   @property

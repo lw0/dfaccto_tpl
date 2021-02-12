@@ -91,8 +91,6 @@ class Frontend:
       name = m.group(2)
       if m.group(1) == 't': # expand type name
         value = self._resolve_type(value)
-      elif m.group(1) == 'p': # expand partial name
-        value = lambda: '{{{{>{}}}}}'.format(value)
       return (name, value)
     return None
 

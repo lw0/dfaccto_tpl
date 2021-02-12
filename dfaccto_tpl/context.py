@@ -1,32 +1,23 @@
+from .common import HasProps
 from .util import DFACCTOError, Registry
 
 
-class Context():
+class Context(HasProps):
 
   def __init__(self):
+    HasProps.__init__(self)
     self._identifiers = Registry()
-    self._packages = Registry()
-    self._entities = Registry()
-    self._props = dict()
+    self._packages = Registry('package')
+    self._entities = Registry('entity')
 
   def clear(self):
     self._identifiers.clear()
     self._packages.clear()
     self._entities.clear()
-    self._props.clear()
+    self.props.clear()
 
   def __str__(self):
     return '<global>'
-
-  @property
-  def props(self):
-    return self._props
-
-  def __getattr__(self, key):
-    if key.startswith('x_') and key[2:] in self._props:
-      return self._props[key[2:]]
-    else:
-      raise AttributeError(key)
 
   @property
   def identifiers(self):
@@ -56,7 +47,7 @@ class Context():
         raise DFACCTOError('Unqualified type reference "{}" can not be found in any package'.format(type_name))
     else:
       pkg = self._packages.lookup(pkg_name)
-      type = pkg.lookup(type_name)
+      type = pkg.types.lookup(type_name)
     return type
 
 

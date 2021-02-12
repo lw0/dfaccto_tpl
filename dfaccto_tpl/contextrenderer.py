@@ -14,7 +14,7 @@ class ContextRenderer:
 
   def load_template(self, tpl_path, tpl_name, is_partial=False):
     tpl_path = Path(tpl_path)
-    template = pystache.parse(tpl_path.read_text())
+    template = tpl_path.read_text()
     if is_partial:
       self._partials[tpl_name] = template
     else:

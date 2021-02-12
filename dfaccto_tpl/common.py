@@ -67,6 +67,26 @@ class Instantiable:
     return self._base is not None
 
 
+class HasProps:
+  def __init__(self, props=None):
+    self._props = props or dict()
+
+  @property
+  def props(self):
+    return self._props
+
+  def __getattr__(self, key):
+    if key.startswith('x_') and key[2:] in self._props:
+      value = self._props[key[2:]]
+      if callable(value):
+        # compensate for automatic calling pystache performs when accessing attributes
+        # wrapping with a secondary callable preserves the callable value
+        # for lambda evaluation
+        return lambda: value
+      else:
+        return value
+    else:
+      raise AttributeError(key)
 
 class Typed:
 
