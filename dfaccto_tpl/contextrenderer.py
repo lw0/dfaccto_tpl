@@ -33,6 +33,8 @@ class ContextRenderer:
     template = self._templates[tpl_name]
     path = self._out_path / (out_name or tpl_name)
     path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+      raise DFACCTOError('Error: would override existing file "{}"'.format(path))
     path.write_text(self._renderer.render(template, context))
 
 
