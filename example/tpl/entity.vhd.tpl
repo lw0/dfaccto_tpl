@@ -70,11 +70,11 @@ begin
 {{/  is_connected}}
 {{#  connections}}
 {{#   is_simple}}
-      {{port.identifier}}({{_idx}}) => {{connection.identifier}}{{^_last}},{{/_last}}{{#_last}});{{/_last}}
+      {{port.identifier}}({{_idx}}) => {{connection.identifier}}{{^_last}},{{/_last}}{{#_last}}{{^port._last}},{{/port._last}}{{#port._last}});{{/port._last}}{{/_last}}
 {{/   is_simple}}
 {{#   is_complex}}
       {{port.identifier_ms}}({{_idx}}) => {{connection.identifier_ms}},
-      {{port.identifier_sm}}({{_idx}}) => {{connection.identifier_sm}}{{^_last}},{{/_last}}{{#_last}});{{/_last}}
+      {{port.identifier_sm}}({{_idx}}) => {{connection.identifier_sm}}{{^_last}},{{/_last}}{{#_last}}{{^port._last}},{{/port._last}}{{#port._last}});{{/port._last}}{{/_last}}
 {{/   is_complex}}
 {{/  connections}}
 {{#  connection}}

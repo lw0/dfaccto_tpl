@@ -29,7 +29,7 @@ class IndexedObj():
 
   def __getattr__(self, key):
     if self._name is not None and self._name == key:
-      return self._obj
+      return self
     try:
       return self._obj[key]
     except TypeError:
