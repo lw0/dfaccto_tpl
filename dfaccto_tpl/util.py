@@ -21,15 +21,12 @@ def Seq(*items, f):
 
 
 class IndexedObj():
-  def __init__(self, obj, idx, len, name=None):
+  def __init__(self, obj, idx, len):
     self._obj = obj
     self._idx = idx
     self._len = len
-    self._name = name
 
   def __getattr__(self, key):
-    if self._name is not None and self._name == key:
-      return self
     try:
       return self._obj[key]
     except TypeError:
@@ -51,17 +48,16 @@ class IndexedObj():
 
 
 class IndexWrapper():
-  def __init__(self, lst, name=None):
+  def __init__(self, lst):
     self._iter = iter(lst)
     self._lst = lst
     self._idx = 0
-    self._name = name
 
   def __iter__(self):
     return self
 
   def __next__(self):
-    item = IndexedObj(next(self._iter), self._idx, len(self._lst), self._name)
+    item = IndexedObj(next(self._iter), self._idx, len(self._lst))
     self._idx += 1
     return item
 
@@ -71,17 +67,16 @@ class IndexWrapper():
 
 
 class Registry(abc.Iterable):
-  def __init__(self, name=None):
+  def __init__(self):
     self.map = OrderedDict()
     self.idx_cache = {}
-    self._name = name
 
   def clear(self):
     self.map.clear()
     self.idx_cache.clear()
 
   def __iter__(self):
-    return IndexWrapper(self.map.values(), self._name)
+    return IndexWrapper(self.map.values())
 
   def __len__(self):
     return len(self.map)
@@ -103,7 +98,7 @@ class Registry(abc.Iterable):
   def contents(self):
     return self.map.values()
 
-  def uniqueName(self, prefix):
+  def unique_name(self, prefix):
     idx = self.idx_cache.get(prefix, 0)
     candidate = prefix
     while candidate in self.map:

@@ -8,7 +8,7 @@ class Package(Element, HasProps):
     Element.__init__(self, context, name, '{name}')
     HasProps.__init__(self, props)
 
-    self._types = Registry('type')
+    self._types = Registry()
     self._identifiers = Registry()
 
     self.context.packages.register(self.name, self)

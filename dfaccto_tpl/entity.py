@@ -9,11 +9,11 @@ class EntityCommon(HasProps):
   def __init__(self, props):
     HasProps.__init__(self, props)
 
-    self._ports = Registry('port')
-    self._generics = Registry('generic')
-    self._instances = Registry('instance')
-    self._signals = Registry('signal')
-    self._connectables = Registry('connectable')
+    self._ports = Registry()
+    self._generics = Registry()
+    self._instances = Registry()
+    self._signals = Registry()
+    self._connectables = Registry()
     self._identifiers = Registry()
 
 
@@ -62,7 +62,7 @@ class EntityCommon(HasProps):
     types = set()
     for conn in self._connectables.contents():
       types.add(conn.type.base)
-    return IndexWrapper(types, 'type')
+    return IndexWrapper(types)
 
 
   @property

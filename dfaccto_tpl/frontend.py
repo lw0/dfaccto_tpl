@@ -157,7 +157,7 @@ class Frontend:
       name = entity_name[0].lower() + entity_name[1:]
     if index is not None:
       name = '{}{:d}'.format(name, index)
-    return self._entity.instances.uniqueName(name)
+    return self._entity.instances.unique_name(name)
 
   def Ins(self, entity_name, **directives):
     DFACCTOAssert(self._entity is not None,

@@ -7,8 +7,8 @@ class Context(HasProps):
   def __init__(self):
     HasProps.__init__(self)
     self._identifiers = Registry()
-    self._packages = Registry('package')
-    self._entities = Registry('entity')
+    self._packages = Registry()
+    self._entities = Registry()
 
   def clear(self):
     self._identifiers.clear()
