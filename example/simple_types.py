@@ -2,12 +2,12 @@ p=Pkg('simple',
       x_templates={'package.vhd': 'pkg_simple.vhd'})
 
 p.Typ('Logic', Simple,
-      x_definition=lambda:'{{>logic.part}}')
+      x_definition='{{>logic.part}}')
 
 p.Typ('Data', Simple,
       x_width=32,
-      x_definition=lambda:'{{>unsigned.part}}')
+      x_definition='{{>unsigned.part}}')
 
 p.Typ('Handshake', Complex,
-      x_definition=lambda:'{{>handshake.part}}')
+      x_definition='{{>handshake.part}}')
 

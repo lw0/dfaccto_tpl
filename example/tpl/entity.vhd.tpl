@@ -54,10 +54,10 @@ begin
     generic map (
 {{#  generics}}
 {{#   has_value}}
-      {{identifier}} => {{value}}{{^_last}},{{/_last}}{{#_last}}){{/_last}}
+      {{identifier}} => {{value}}{{#_last}}){{|_last}},{{/_last}}
 {{/   has_value}}
 {{^   has_value}}
-      {{identifier}} => open{{^_last}},{{/_last}}{{#_last}}){{/_last}}
+      {{identifier}} => open{{#_last}}){{|_last}},{{/_last}}
 {{/   has_value}}
 {{/  generics}}
 {{/ has_generics}}
@@ -66,24 +66,24 @@ begin
       pi_rst_n => pi_rst_n,
 {{# ports}}
 {{^  is_connected}}
-      {{identifier}} => open{{^_last}},{{/_last}}{{#_last}});{{/_last}}
+      {{identifier}} => open{{#_last}});{{|_last}},{{/_last}}
 {{/  is_connected}}
 {{#  connections}}
 {{#   is_simple}}
-      {{port.identifier}}({{_idx}}) => {{connection.identifier}}{{^_last}},{{/_last}}{{#_last}}{{^port._last}},{{/port._last}}{{#port._last}});{{/port._last}}{{/_last}}
+      {{port.identifier}}({{_idx}}) => {{connection.identifier}}{{#_last}}{{#'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
 {{/   is_simple}}
 {{#   is_complex}}
       {{port.identifier_ms}}({{_idx}}) => {{connection.identifier_ms}},
-      {{port.identifier_sm}}({{_idx}}) => {{connection.identifier_sm}}{{^_last}},{{/_last}}{{#_last}}{{^port._last}},{{/port._last}}{{#port._last}});{{/port._last}}{{/_last}}
+      {{port.identifier_sm}}({{_idx}}) => {{connection.identifier_sm}}{{#_last}}{{#'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
 {{/   is_complex}}
 {{/  connections}}
 {{#  connection}}
 {{#   is_simple}}
-      {{port.identifier}} => {{connection.identifier}}{{^_last}},{{/_last}}{{#_last}});{{/_last}}
+      {{port.identifier}} => {{connection.identifier}}{{#_last}});{{|_last}},{{/_last}}
 {{/   is_simple}}
 {{#   is_complex}}
       {{port.identifier_ms}} => {{connection.identifier_ms}},
-      {{port.identifier_sm}} => {{connection.identifier_sm}}{{^_last}},{{/_last}}{{#_last}});{{/_last}}
+      {{port.identifier_sm}} => {{connection.identifier_sm}}{{#_last}});{{|_last}},{{/_last}}
 {{/   is_complex}}
 {{/  connection}}
 {{/ ports}}

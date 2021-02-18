@@ -77,14 +77,7 @@ class HasProps:
 
   def __getattr__(self, key):
     if key.startswith('x_') and key[2:] in self._props:
-      value = self._props[key[2:]]
-      if callable(value):
-        # compensate for automatic calling pystache performs when accessing attributes
-        # wrapping with a secondary callable preserves the callable value
-        # for lambda evaluation
-        return lambda: value
-      else:
-        return value
+      return self._props[key[2:]]
     else:
       raise AttributeError(key)
 

@@ -1,7 +1,7 @@
 from pathlib import Path
-import pystache
 
-from . import DFACCTOError, Role, Seq, Context, Frontend
+from .util import DFACCTOError
+from .template import parse, TemplateError
 
 
 class ContextRenderer:
@@ -10,15 +10,17 @@ class ContextRenderer:
     self._out_path = Path(out_path)
     self._templates = dict()
     self._partials = dict()
-    self._renderer = pystache.Renderer(partials=self._partials, escape=lambda s: s)
 
   def load_template(self, tpl_path, tpl_name, is_partial=False):
     tpl_path = Path(tpl_path)
-    template = tpl_path.read_text()
-    if is_partial:
-      self._partials[tpl_name] = template
-    else:
-      self._templates[tpl_name] = template
+    tpl_string = tpl_path.read_text()
+    try:
+      if is_partial:
+        self._partials[tpl_name] = parse(tpl_string, tpl_name)
+      else:
+        self._templates[tpl_name] = parse(tpl_string, tpl_name)
+    except TemplateError as e:
+      raise DFACCTOError(str(e))
 
   def load_templates(self, search_path, tpl_suffix, partial_suffix=None):
     search_path = Path(search_path)
@@ -35,6 +37,9 @@ class ContextRenderer:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
       raise DFACCTOError('Error: would override existing file "{}"'.format(path))
-    path.write_text(self._renderer.render(template, context))
+    try:
+      path.write_text(template.render(context, partial=self._partials.get))
+    except TemplateError as e:
+      raise DFACCTOError(str(e))
 
 
