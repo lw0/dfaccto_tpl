@@ -11,25 +11,6 @@ from .package import Package
 
 class Frontend:
 
-  # '<type_name>'
-  # '<pkg_name>.<type_name>'
-  TypePattern = re.compile('(?:(\w+)\.)?(\w+)')
-
-  # g_<name>=None
-  # g_<name>=<value>
-  GenericPattern = re.compile('g_(\w+)')
-
-  # p<role>_<name>='<type>'
-  # p<role>_<name>=('<type>', '<size_generic_name>')
-  PortRolePattern = re.compile('p(\w)_(\w+)')
-
-  # p_<name>='<signal_name>'
-  # p_<name>=['<signal_name>', ... ]
-  PortConnectPattern = re.compile('p_(\w+)')
-
-  # x_<name>=<value>
-  # xt_<name>='<type_name>'
-  PropertyPattern = re.compile('x(t?)_(\w+)')
 
 
   def __init__(self, context, *, entity=None, package=None):
@@ -37,7 +18,9 @@ class Frontend:
     self._entity = entity
     self._package = package
 
-
+  # g_<name>=None
+  # g_<name>=<value>
+  GenericPattern = re.compile('g_(\w+)')
 
   def _resolve_generic(self, key, value):
     m = type(self).GenericPattern.match(key)
@@ -46,6 +29,10 @@ class Frontend:
       return (name, value)
     return None
 
+  # '<type_name>'
+  # '<pkg_name>.<type_name>'
+  TypePattern = re.compile('(?:(\w+)\.)?(\w+)')
+
   def _resolve_type(self, value):
     m = type(self).TypePattern.match(value)
     DFACCTOAssert(m,
@@ -53,6 +40,10 @@ class Frontend:
     pkg_name = m.group(1)
     type_name = m.group(2)
     return self._context.get_type(type_name, pkg_name)
+
+  # p<role>_<name>='<type>'
+  # p<role>_<name>=('<type>', '<size_generic_name>')
+  PortRolePattern = re.compile('p(\w)_(\w+)')
 
   def _resolve_port_definition(self, key, value):
     m = type(self).PortRolePattern.match(key)
@@ -70,6 +61,9 @@ class Frontend:
       return (name, port_type.derive(role), size_generic_name)
     return None
 
+  # p_<name>='<signal_name>'
+  # p_<name>=['<signal_name>', ... ]
+  PortConnectPattern = re.compile('p_(\w+)')
 
   def _resolve_port_connect(self, key, value, index=None):
     m = type(self).PortConnectPattern.match(key)
@@ -84,6 +78,9 @@ class Frontend:
       return (port_name, to)
     return None
 
+  # x_<name>=<value>
+  # xt_<name>='<type_name>'
+  PropertyPattern = re.compile('x(t?)_(\w+)')
 
   def _resolve_property(self, key, value):
     m = type(self).PropertyPattern.match(key)
@@ -92,6 +89,24 @@ class Frontend:
       if m.group(1) == 't': # expand type name
         value = self._resolve_type(value)
       return (name, value)
+    return None
+
+  # x_<name>=<value>
+  # xt_<name>='<type_name>'
+  # xi_<name>='<identifier_pattern>'
+  TypePropertyPattern = re.compile('x([tiI]?)_(\w+)')
+
+  def _resolve_type_property(self, key, value):
+    m = type(self).TypePropertyPattern.match(key)
+    if m:
+      name = m.group(2)
+      if m.group(1) == 't': # expand type name
+        value = self._resolve_type(value)
+      elif m.group(1) == 'i':
+        return (True, name, value, False)
+      elif m.group(1) == 'I':
+        return (True, name, value, True)
+      return (False, name, value, None)
     return None
 
   def Gbl(self, **directives):
@@ -118,15 +133,20 @@ class Frontend:
   def Typ(self, name, role, **directives):
     DFACCTOAssert(self._package is not None,
       'Typ() must be used in a package context')
-    props = {}
+    props = dict()
+    idents = list()
     for key,value in directives.items():
-      res = self._resolve_property(key, value)
+      res = self._resolve_type_property(key, value)
       if res is not None:
-        props[res[0]] = res[1]
+        is_ident, res_name, res_value, res_use_dir = res
+        if is_ident:
+          idents.append((res_name, res_value, res_use_dir))
+        else:
+          props[res_name] = res_value
       #TODO-lw ?raise error for unrecognized directives?
     DFACCTOAssert(role.is_signal,
       'Can not define type {} with port role "{}"'.format(name, role))
-    Type(self._package, name, role, **props)
+    Type(self._package, name, role, props, idents)
 
 
   def Ent(self, name, **directives):

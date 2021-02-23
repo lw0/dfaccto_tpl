@@ -6,8 +6,12 @@ p.Typ('Logic', Simple,
 
 p.Typ('Data', Simple,
       x_width=32,
+      xI_cnull='c_{name}Null{dir}',
+      xi_cwidth='c_{name}Width',
       x_definition='{{>unsigned.part}}')
 
 p.Typ('Handshake', Complex,
+      xi_cnull='c_{name}Null{dir}',
+      xi_cinfo='c_{name}Info',
       x_definition='{{>handshake.part}}')
 

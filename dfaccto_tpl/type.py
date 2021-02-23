@@ -7,35 +7,34 @@ from .role import Role
 
 
 class Type(HasProps):
-  def __init__(self, package, name, role, **props):
+  def __init__(self, package, name, role, props, idents):
     HasProps.__init__(self, props)
     self.context = package.context
     self.package = package
     self.name = name
     self.role = role
     self.package.types.register(self.name, self)
+    self.identifiers = list()
     if self.role.is_simple:
+      self._dirs = ('',)
       self.identifier = 't_{}'.format(self.name)
       self.identifier_v = 't_{}_v'.format(self.name)
-      self.package.identifiers.register(self.identifier, self)
-      self.package.identifiers.register(self.identifier_v, self)
-      self.identifiers = (self.identifier, self.identifier_v)
+      self.identifiers.extend((self.identifier, self.identifier_v))
     elif self.role.is_complex:
+      self._dirs = ('_ms', '_sm')
       self.identifier_ms = 't_{}_ms'.format(self.name)
       self.identifier_sm = 't_{}_sm'.format(self.name)
       self.identifier_v_ms = 't_{}_v_ms'.format(self.name)
       self.identifier_v_sm = 't_{}_v_sm'.format(self.name)
-      self.const_null_ms = 'c_{}Null_ms'.format(self.name)
-      self.const_null_sm = 'c_{}Null_sm'.format(self.name) #TODO-lw formalize this
-      self.package.identifiers.register(self.identifier_ms, self)
-      self.package.identifiers.register(self.identifier_sm, self)
-      self.package.identifiers.register(self.identifier_v_ms, self)
-      self.package.identifiers.register(self.identifier_v_sm, self)
-      self.package.identifiers.register(self.const_null_ms, self)
-      self.package.identifiers.register(self.const_null_sm, self)
-      self.identifiers = (self.identifier_ms, self.identifier_sm,
-                          self.identifier_v_ms, self.identifier_v_sm,
-                          self.const_null_ms, self.const_null_sm)
+      self.identifiers.extend((self.identifier_ms, self.identifier_sm,
+                               self.identifier_v_ms, self.identifier_v_sm))
+    for name,pattern,use_dir in idents:
+      for dir in (self._dirs if use_dir else ('',)):
+        ident = pattern.format(name=self.name, dir=dir, role=str(self.role))
+        self.identifiers.append(ident)
+        self.props[name+dir] = ident
+    for ident in self.identifiers:
+      self.package.identifiers.register(ident, self)
     self.derived_from = None
     self.derivates = {self.role: self}
 
