@@ -9,7 +9,7 @@ class InstPort(Typed, Sized, Instantiable, EntityElement):
     inst_size_generic = port.size_generic and inst_entity.generics.lookup(port.size_generic.name)
     EntityElement.__init__(self, inst_entity, port.name, 'p{mode}_{name}{dir}')
     Instantiable.__init__(self, port)
-    Sized.__init__(self, inst_size_generic or False) # inst_size_generic is ValueContainer and will propagate
+    Sized.__init__(self, inst_size_generic or False) # InstGeneric is ValueContainer and will propagate
     Typed.__init__(self, port.type, on_type_set=self._register_identifiers)
 
     self._size_generic = inst_size_generic
@@ -77,23 +77,22 @@ class InstPort(Typed, Sized, Instantiable, EntityElement):
 
 class Port(Connectable, Instantiable, EntityElement):
   def __init__(self, entity, name, type, size_generic_name=None):
-    size_generic = None
-    size = False
-    if size_generic_name is not None:
-      size_generic = entity.generics.lookup(size_generic_name)
-      size = size_generic.identifier
-    # Generic identifier or False are not ValueContainers, size will be determined here
+    # size_generic = None
+    # size = False
+    # if size_generic_name is not None:
+    #   size_generic = entity.generics.lookup(size_generic_name)
+    #   size = size_generic.identifier
+    size_generic = size_generic_name and entity.generics.lookup(size_generic_name)
+    # Generic or False are not ValueContainers, size will be determined here
 
     EntityElement.__init__(self, entity, name, 'p{mode}_{name}{dir}')
     Instantiable.__init__(self)
-    Connectable.__init__(self, type, size, on_type_set=self._register_identifiers)
+    Connectable.__init__(self, type, size_generic or False)
 
-    self._size_generic = size_generic
+    self._size_generic = size_generic #TODO-lw refactor move into size_generic assignment
 
     self.entity.ports.register(self.name, self)
     self.entity.connectables.register(self.name, self)
-
-  def _register_identifiers(self):
     if self.is_simple:
       self.entity.identifiers.register(self.identifier, self)
     elif self.is_complex:

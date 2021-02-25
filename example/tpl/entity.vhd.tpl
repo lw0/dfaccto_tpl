@@ -2,10 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-{{#used_types}}
-{{# identifiers}}
-use work.{{package.identifier}}.{{.}};
-{{/ identifiers}}
+{{#used_packages}}
+use work.{{identifier}};
 {{/used_types}}
 
 
@@ -13,7 +11,12 @@ entity {{identifier}} is
 {{#has_generics}}
   generic (
 {{# generics}}
-    {{identifier}} : integer{{#_last}}){{/_last}};
+{{#  is_complex}}
+    {{identifier_ms}} : {{#is_scalar}}{{type.qualified_ms}}{{|is_scalar}}{{type.qualified_v_ms}} (0 to {{size}}-1){{/is_scalar}}{{#_last}}){{/_last}};
+    {{identifier_sm}} : {{#is_scalar}}{{type.qualified_sm}}{{|is_scalar}}{{type.qualified_v_sm}} (0 to {{size}}-1){{/is_scalar}}{{#_last}}){{/_last}};
+{{|  is_complex}}
+    {{identifier}} : {{#is_scalar}}{{type.qualified}}{{|is_scalar}}{{type.qualified_v}} (0 to {{size}}-1){{/is_scalar}}{{#_last}}){{/_last}};
+{{/  is_complex}}
 {{/ generics}}
 {{/has_generics}}
   port (
@@ -23,12 +26,11 @@ entity {{identifier}} is
 
 {{#ports}}
 {{# is_complex}}
-    {{identifier_ms}} : {{mode_ms}} {{type.identifier_ms}}{{#is_vector}} (0 to {{size}}-1){{/is_vector}};
-    {{identifier_sm}} : {{mode_sm}} {{type.identifier_sm}}{{#is_vector}} (0 to {{size}}-1){{/is_vector}}{{#_last}}){{/_last}};
+    {{identifier_ms}} : {{mode_ms}} {{#is_scalar}}{{type.qualified_ms}}{{|is_scalar}}{{type.qualified_v_ms}} (0 to {{size}}-1){{/is_scalar}};
+    {{identifier_sm}} : {{mode_sm}} {{#is_scalar}}{{type.qualified_sm}}{{|is_scalar}}{{type.qualified_v_sm}} (0 to {{size}}-1){{/is_scalar}}{{#_last}}){{/_last}};
+{{| is_complex}}
+    {{identifier}} : {{mode}} {{#is_scalar}}{{type.qualified}}{{|is_scalar}}{{type.qualified_v}} (0 to {{size}}-1){{/is_scalar}}{{#_last}}){{/_last}};
 {{/ is_complex}}
-{{# is_simple}}
-    {{identifier}} : {{mode}} {{type.identifier}}{{#is_vector}} (0 to {{size}}-1){{/is_vector}}{{#_last}}){{/_last}};
-{{/ is_simple}}
 {{/ports}}
 {{/has_ports}}
 end {{identifier}};
@@ -37,12 +39,11 @@ end {{identifier}};
 architecture Structure of {{identifier}} is
 
 {{#signals}}
-{{# is_simple}}
-  signal {{identifier}} : {{type.identifier}}{{#is_vector}} (0 to {{size}}-1){{/is_vector}};
-{{/ is_simple}}
 {{# is_complex}}
-  signal {{identifier_ms}} : {{type.identifier_ms}}{{#is_vector}} (0 to {{size}}-1){{/is_vector}};
-  signal {{identifier_sm}} : {{type.identifier_sm}}{{#is_vector}} (0 to {{size}}-1){{/is_vector}};
+  signal {{identifier_ms}} : {{#is_vector}}{{type.qualified_v_ms}} (0 to {{size}}-1){{|is_vector}}{{type.qualified_ms}}{{/is_vector}};
+  signal {{identifier_sm}} : {{#is_vector}}{{type.qualified_v_sm}} (0 to {{size}}-1){{|is_vector}}{{type.qualified_ms}}{{/is_vector}};
+{{| is_complex}}
+  signal {{identifier}} : {{#is_vector}}{{type.qualified_v}} (0 to {{size}}-1){{|is_vector}}{{type.qualified}}{{/is_vector}};
 {{/ is_complex}}
 {{/signals}}
 

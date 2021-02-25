@@ -158,5 +158,32 @@ class Role(Enum):
     else:
       return None
 
+  @property
+  def cmode(self):
+    if self.is_input:
+      return 'i'
+    elif self.is_output:
+      return 'o'
+    else:
+      return None
+
+  @property
+  def cmode_ms(self):
+    if self.is_slave or self.is_view:
+      return 'i'
+    elif self.is_master or self.is_pass:
+      return 'o'
+    else:
+      return None
+
+  @property
+  def cmode_sm(self):
+    if self.is_master or self.is_view:
+      return 'i'
+    elif self.is_slave or self.is_pass:
+      return 'o'
+    else:
+      return None
+
 
 

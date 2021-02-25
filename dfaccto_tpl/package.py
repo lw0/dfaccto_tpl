@@ -9,6 +9,7 @@ class Package(Element, HasProps):
     HasProps.__init__(self, props)
 
     self._types = Registry()
+    self._constants = Registry()
     self._identifiers = Registry()
 
     self.context.packages.register(self.name, self)
@@ -18,8 +19,20 @@ class Package(Element, HasProps):
     return self.name
 
   @property
+  def has_role(self):
+    return False
+
+  @property
+  def is_definite(self):
+    return True
+
+  @property
   def types(self):
     return self._types
+
+  @property
+  def constants(self):
+    return self._constants
 
   @property
   def identifiers(self):

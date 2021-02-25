@@ -1,18 +1,18 @@
 Inc('simple_types.py')
 
 
-Ent('Inner', g_DataWidth=None,
+Ent('Inner', g_DataWidth='Size',
     ps_hsIn='simple.Handshake', pm_hsOut='simple.Handshake',
     pi_dataIn=('simple.Data', 'DataWidth'),
     po_dataOut=('simple.Data', 'DataWidth'),
     po_done='simple.Logic')
 
-Ent('Barrier', g_PortCount=None,
+Ent('Barrier', g_PortCount='Size',
     pi_doneIn=('Logic', 'PortCount'),
     po_done='Logic')
 
 
-e=Ent('Toplevel', g_DataWidth=None,
+e=Ent('Toplevel', g_DataWidth='Size',
       ps_hsIn='Handshake',
       pm_hsOut='Handshake',
       pi_dataIn=('Data', 'DataWidth'),

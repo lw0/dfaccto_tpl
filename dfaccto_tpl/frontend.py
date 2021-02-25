@@ -10,24 +10,38 @@ from .package import Package
 
 
 class Frontend:
-
-
-
   def __init__(self, context, *, entity=None, package=None):
     self._context = context
     self._entity = entity
     self._package = package
 
-  # g_<name>=None
-  # g_<name>=<value>
+
   GenericPattern = re.compile('g_(\w+)')
 
-  def _resolve_generic(self, key, value):
+  # g_<name>='<type>'
+  # g_<name>=('type', '<size_generic_name>')
+  def _resolve_generic_definition(self, key, value):
+    m = type(self).GenericPattern.match(key)
+    if m:
+      name = m.group(1)
+      if isinstance(value, tuple):
+        type_name = value[0]
+        size_generic_name = value[1]
+      else:
+        type_name = value
+        size_generic_name = None
+      generic_type = self._resolve_type(type_name)
+      return (name, generic_type, size_generic_name)
+    return None
+
+  # g_<name>=<value>
+  def _resolve_generic_assign(self, key, value):
     m = type(self).GenericPattern.match(key)
     if m:
       name = m.group(1)
       return (name, value)
     return None
+
 
   # '<type_name>'
   # '<pkg_name>.<type_name>'
@@ -91,23 +105,23 @@ class Frontend:
       return (name, value)
     return None
 
-  # x_<name>=<value>
-  # xt_<name>='<type_name>'
-  # xi_<name>='<identifier_pattern>'
-  TypePropertyPattern = re.compile('x([tiI]?)_(\w+)')
+  # # x_<name>=<value>
+  # # xt_<name>='<type_name>'
+  # # xi_<name>='<identifier_pattern>'
+  # TypePropertyPattern = re.compile('x([tiI]?)_(\w+)')
 
-  def _resolve_type_property(self, key, value):
-    m = type(self).TypePropertyPattern.match(key)
-    if m:
-      name = m.group(2)
-      if m.group(1) == 't': # expand type name
-        value = self._resolve_type(value)
-      elif m.group(1) == 'i':
-        return (True, name, value, False)
-      elif m.group(1) == 'I':
-        return (True, name, value, True)
-      return (False, name, value, None)
-    return None
+  # def _resolve_type_property(self, key, value):
+  #   m = type(self).TypePropertyPattern.match(key)
+  #   if m:
+  #     name = m.group(2)
+  #     if m.group(1) == 't': # expand type name
+  #       value = self._resolve_type(value)
+  #     elif m.group(1) == 'i':
+  #       return (True, name, value, False)
+  #     elif m.group(1) == 'I':
+  #       return (True, name, value, True)
+  #     return (False, name, value, None)
+  #   return None
 
   def Gbl(self, **directives):
     props = {}
@@ -134,19 +148,14 @@ class Frontend:
     DFACCTOAssert(self._package is not None,
       'Typ() must be used in a package context')
     props = dict()
-    idents = list()
     for key,value in directives.items():
-      res = self._resolve_type_property(key, value)
+      res = self._resolve_property(key, value)
       if res is not None:
-        is_ident, res_name, res_value, res_use_dir = res
-        if is_ident:
-          idents.append((res_name, res_value, res_use_dir))
-        else:
-          props[res_name] = res_value
+        props[res[0]] = res[1]
       #TODO-lw ?raise error for unrecognized directives?
     DFACCTOAssert(role.is_signal,
       'Can not define type {} with port role "{}"'.format(name, role))
-    Type(self._package, name, role, props, idents)
+    Type(self._package, name, role, props)
 
 
   def Ent(self, name, **directives):
@@ -154,9 +163,9 @@ class Frontend:
     ports = []
     props = {}
     for key,value in directives.items():
-      res = self._resolve_generic(key, value)
+      res = self._resolve_generic_definition(key, value)
       if res is not None:
-        generics.append(res[0])
+        generics.append(res)
         continue
       res = self._resolve_port_definition(key, value)
       if res is not None:
@@ -166,8 +175,8 @@ class Frontend:
       if res is not None:
         props[res[0]] = res[1]
     entity = Entity(self._context, name, **props)
-    for name in generics:
-      entity.generic(name)
+    for name, type, size_generic_name in generics:
+      entity.generic(name, type, size_generic_name)
     for name,type,size_generic_name in ports:
       entity.port(name, type, size_generic_name)
     return Frontend(self._context, entity=entity)
@@ -187,7 +196,7 @@ class Frontend:
     generics = []
     ports = []
     for key,value in directives.items():
-      res = self._resolve_generic(key, value)
+      res = self._resolve_generic_assign(key, value)
       if res is not None:
         generics.append(res)
         continue

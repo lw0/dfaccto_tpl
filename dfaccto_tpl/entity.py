@@ -16,6 +16,13 @@ class EntityCommon(HasProps):
     self._connectables = Registry()
     self._identifiers = Registry()
 
+  @property
+  def has_role(self):
+    return False
+
+  @property
+  def is_definite(self):
+    return True
 
   @property
   def generics(self):
@@ -58,11 +65,11 @@ class EntityCommon(HasProps):
     return self._connectables
 
   @property
-  def used_types(self):
-    types = set()
+  def used_packages(self):
+    packages = set()
     for conn in self._connectables.contents():
-      types.add(conn.type.base)
-    return IndexWrapper(types)
+      packages.add(conn.type.package)
+    return IndexWrapper(packages)
 
 
   @property
@@ -112,8 +119,8 @@ class Entity(EntityCommon, Instantiable, Element):
   def __str__(self):
     return self.name
 
-  def generic(self, name):
-    return Generic(self, name)
+  def generic(self, name, type, size_generic_name):
+    return Generic(self, name, type, size_generic_name)
 
   def port(self, name, type, size_generic_name=None):
     return Port(self, name, type, size_generic_name)
