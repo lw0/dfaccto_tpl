@@ -1,120 +1,34 @@
-# from copy import copy
-# from enum import Enum
-
-# from .common import HasProps
-# from .util import DFACCTOAssert
-# from .role import Role
+from .common import HasProps, ValueContainer
+from .element import PackageElement
+from .util import DFACCTOAssert, safe_str
 
 
-# class Constant(HasProps, HasType):
-#   def __init__(self, package, name, type, props):
-#     HasProps.__init__(self, props)
-#     self.context = package.context
-#     self.package = package
-#     self.name = name
-#     self.role = role
-#     self.package.types.register(self.name, self)
-#     self.identifiers = list()
-#     if self.role.is_simple:
-#       self._dirs = ('',)
-#       self.identifier = 't_{}'.format(self.name)
-#       self.identifier_v = 't_{}_v'.format(self.name)
-#       self.identifiers.extend((self.identifier, self.identifier_v))
-#     elif self.role.is_complex:
-#       self._dirs = ('_ms', '_sm')
-#       self.identifier_ms = 't_{}_ms'.format(self.name)
-#       self.identifier_sm = 't_{}_sm'.format(self.name)
-#       self.identifier_v_ms = 't_{}_v_ms'.format(self.name)
-#       self.identifier_v_sm = 't_{}_v_sm'.format(self.name)
-#       self.identifiers.extend((self.identifier_ms, self.identifier_sm,
-#                                self.identifier_v_ms, self.identifier_v_sm))
-#     for name,pattern,use_dir in idents:
-#       for dir in (self._dirs if use_dir else ('',)):
-#         ident = pattern.format(name=self.name, dir=dir, role=str(self.role))
-#         self.identifiers.append(ident)
-#         self.props[name+dir] = ident
-#     for ident in self.identifiers:
-#       self.package.identifiers.register(ident, self)
-#     self.derived_from = None
-#     self.derivates = {self.role: self}
+class Constant(ValueContainer, PackageElement, HasProps):
+  def __init__(self, package, name, type, size_constant_name=None, value=None, *, props):
+    self._size_constant = size_constant_name and package.constants.lookup(size_constant_name)
 
-#   def __str__(self):
-#     return '({}).t{}_{}'.format(self.package, self.role, self.name)
+    ValueContainer.__init__(self, type, self._size_constant or False, value)
+    PackageElement.__init__(self, package, name, 'c_{name}{dir}')
+    HasProps.__init__(self, props)
 
-#   def derive(self, role):
-#     DFACCTOAssert(self.derived_from is None,
-#       'Can not derive from already derived type {}'.format(self))
-#     DFACCTOAssert(self.role.is_compatible(role),
-#       'Can not derive incompatible role {} from type {}'.format(role, self))
-#     if role in self.derivates:
-#       return self.derivates[role]
-#     derivate = copy(self)
-#     derivate.role = role
-#     derivate.derived_from = self
-#     self.derivates[role] = derivate
-#     return derivate
+    self.package.constants.register(self.name, self)
+    if self.is_complex:
+      self.package.identifiers.register(self.identifier_ms, self)
+      self.package.identifiers.register(self.identifier_sm, self)
+    else:
+      self.package.identifiers.register(self.identifier, self)
 
-#   def is_compatible(self, other):
-#     if self.name != other.name:
-#       return False
-#     return self.role.is_compatible(other.role)
+  def __str__(self):
+    try:
+      if self.is_vector:
+        return '({}).c_{}({}):{}:={}'.format(self.package, self.name)
+      else:
+        return '({}).c_{}:{}:={}'.format(self.package, self.name)
+    except:
+      return safe_str(self)
 
-#   @property
-#   def base(self):
-#     if self.derived_from is None:
-#       return self
-#     return self.derived_from
-
-#   @property
-#   def is_signal(self):
-#     return self.role.is_signal
-
-#   @property
-#   def is_port(self):
-#     return self.role.is_port
-
-#   @property
-#   def is_input(self):
-#     return self.role.is_input
-
-#   @property
-#   def is_output(self):
-#     return self.role.is_output
-
-#   @property
-#   def is_simple(self):
-#     return self.role.is_simple
-
-#   @property
-#   def is_view(self):
-#     return self.role.is_view
-
-#   @property
-#   def is_pass(self):
-#     return self.role.is_pass
-
-#   @property
-#   def is_slave(self):
-#     return self.role.is_slave
-
-#   @property
-#   def is_master(self):
-#     return self.role.is_master
-
-#   @property
-#   def is_complex(self):
-#     return self.role.is_complex
-
-#   @property
-#   def mode(self):
-#     return self.role.mode
-
-#   @property
-#   def mode_ms(self):
-#     return self.role.mode_ms
-
-#   @property
-#   def mode_sm(self):
-#     return self.role.mode_sm
+  @property
+  def size_constant(self):
+    return self._size_constant
 
 

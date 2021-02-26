@@ -5,7 +5,6 @@ from .util import DFACCTOError, DFACCTOAssert, IndexedObj, ValueStore
 
 
 
-
 class Instantiable:
   def __init__(self, base=None):
     self._base = base
@@ -98,6 +97,11 @@ class Typed:
         else:
           other._set_size(False)
     else:
+      # Only ValueContainers may adapt to plain values and ValueContainers have explicit types
+      # thus self.has_type should be True here
+      DFACCTOAssert(self.knows_type,
+        'Untyped {} can not adapt to plain value "{}"'.format(self, other))
+
       # plain values are considered untyped scalars
       #  unless part_of specifies an untyped vector
       # do not touch _type
@@ -138,17 +142,20 @@ class Typed:
       self._on_type_set()
 
   def _set_size(self, size):
-    #concerns: auto-create ValueContainer for non-false values
-    #          ensure that there is no infinite recursion...
     if self._size is None:
-      if size is False:
+      if size is None:
+        pass # unknown size has no effect
+      elif size is False:
         self._size = False
       elif isinstance(size, ValueContainer):
+        DFACCTOAssert(size.is_scalar,
+          'Can not use vector {} as size for vector {}'.format(size, self))
         self._size = size
-      elif size is not None:
+      else:
+        # TODO-lw: _size must have a simple type, but type=None here
+        #  also allows complex types!
         self._size = ValueContainer(type=None, size=False, value=size)
-      # size is None: no modification
-    elif isinstance(self._size, ValueContainer): #self.is_vector
+    elif isinstance(self._size, ValueContainer):
       self._size.assign(size)
     else: # self._size is False
       DFACCTOAssert(size is None or size is False,
@@ -264,14 +271,24 @@ class Typed:
 
 class ValueContainer(Typed, ValueStore):
   def __init__(self, type, size, value=None):
-    self._idx = self._create(value)
+    self._idx = self._create()
     Typed.__init__(self, type, size)
     if value is not None:
       self.assign(value)
 
   @property
   def value(self):
-    return self._get_value(self._idx)
+    return self._get_value(self._idx) if self.is_simple else None
+
+  @property
+  def value_ms(self):
+    val = self._get_value(self._idx)
+    return val and val[0] if self.is_complex else None
+
+  @property
+  def value_sm(self):
+    val = self._get_value(self._idx)
+    return val and val[1] if self.is_complex else None
 
   @property
   def has_value(self):
@@ -282,7 +299,12 @@ class ValueContainer(Typed, ValueStore):
     if isinstance(other, ValueContainer):
       self._assign(self._idx, other._idx)
     else:
-      self._set_value(self._idx, other)
+      if self.is_complex:
+        DFACCTOAssert(isinstance(other, abc.Mapping) and 'ms' in other and 'sm' in other,
+          'Complex {} must be assigned a mapping with "ms" and "sm" entries'.format(self))
+        self._set_value(self._idx, (other['ms'], other['sm']))
+      else: #self.is_simple
+        self._set_value(self._idx, other)
 
 
 class Connectable(Typed):

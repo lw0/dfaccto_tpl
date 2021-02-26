@@ -132,7 +132,6 @@ class Frontend:
       #TODO-lw ?raise error for unrecognized directives?
     self._context.props.update(props) # TODO-lw deep update, so that multiple Gbl(x_templates={...}) extend templates dir!
 
-
   def Pkg(self, name, **directives):
     props = {}
     for key,value in directives.items():
@@ -154,8 +153,26 @@ class Frontend:
         props[res[0]] = res[1]
       #TODO-lw ?raise error for unrecognized directives?
     DFACCTOAssert(role.is_signal,
-      'Can not define type {} with port role "{}"'.format(name, role))
-    Type(self._package, name, role, props)
+      'Can not define type {} with role "{}"'.format(name, role))
+    self._package.add_type(name, role, props)
+
+  def Con(self, name, type_spec, value=None, **directives):
+    DFACCTOAssert(self._package is not None,
+      'Con() must be used in a package context')
+    if isinstance(type_spec, tuple):
+      type_name = type_spec[0]
+      size_name = type_spec[1]
+    else:
+      type_name = type_spec
+      size_name = None
+    constant_type = self._resolve_type(type_name)
+    props = dict()
+    for key,val in directives.items():
+      res = self._resolve_property(key, val)
+      if res is not None:
+        props[res[0]] = res[1]
+      #TODO-lw ?raise error for unrecognized directives?
+    self._package.add_constant(name, constant_type, size_name, value, props)
 
 
   def Ent(self, name, **directives):

@@ -1,6 +1,6 @@
 import collections.abc as abc
 
-from .util import DFACCTOAssert
+from .util import DFACCTOAssert, safe_str
 from .common import Instantiable, Typed, ValueContainer
 from .element import EntityElement
 
@@ -21,16 +21,19 @@ class InstGeneric(ValueContainer, Instantiable, EntityElement):
       self.entity.identifiers.register(self.identifier_sm, self)
 
   def __str__(self):
-    if self.is_vector:
-      if self.has_value:
-        return '({}).g_{}({}):{}={}'.format(self.entity, self.name, self.size, self.type, self.value)
+    try:
+      if self.is_vector:
+        if self.has_value:
+          return '({}).g_{}({}):{}={}'.format(self.entity, self.name, self.size, self.type, self.value)
+        else:
+          return '({}).g_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
       else:
-        return '({}).g_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
-    else:
-      if self.has_value:
-        return '({}).g_{}:{}={}'.format(self.entity, self.name, self.type, self.value)
-      else:
-        return '({}).g_{}:{}'.format(self.entity, self.name, self.type)
+        if self.has_value:
+          return '({}).g_{}:{}={}'.format(self.entity, self.name, self.type, self.value)
+        else:
+          return '({}).g_{}:{}'.format(self.entity, self.name, self.type)
+    except:
+      return safe_str(self)
 
   @property
   def size_generic(self):
@@ -60,10 +63,13 @@ class Generic(Typed, Instantiable, EntityElement):
       self.entity.identifiers.register(self.identifier_sm, self)
 
   def __str__(self):
-    if self.is_vector:
-      return '({}).g_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
-    else:
-      return '({}).g_{}:{}'.format(self.entity, self.name, self.type)
+    try:
+      if self.is_vector:
+        return '({}).g_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
+      else:
+        return '({}).g_{}:{}'.format(self.entity, self.name, self.type)
+    except:
+      return safe_str(self)
 
   def instantiate(self, inst_entity):
     return InstGeneric(self, inst_entity)

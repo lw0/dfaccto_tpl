@@ -9,4 +9,10 @@ package {{identifier}} is
   {{*x_definition}}
 
 {{/types}}
+
+
+{{#constants}}
+  {{*x_definition}}
+
+{{/constants}}
 end {{identifier}};

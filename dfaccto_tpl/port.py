@@ -1,6 +1,6 @@
 import collections.abc as abc
 
-from .util import DFACCTOAssert, IndexWrapper, DFACCTOError
+from .util import DFACCTOAssert, IndexWrapper, DFACCTOError, safe_str
 from .common import Typed, Connectable, Instantiable
 from .element import EntityElement
 
@@ -26,16 +26,19 @@ class InstPort(Typed, Instantiable, EntityElement):
       self.entity.identifiers.register(self.identifier_sm, self)
 
   def __str__(self):
-    if self.is_vector:
-      if self._connection is None:
-        return '({}).p_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
+    try:
+      if self.is_vector:
+        if self._connection is None:
+          return '({}).p_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
+        else:
+          return '({}).p_{}({}):{}=>{}'.format(self.entity, self.name, self.size, self.type, self._connection)
       else:
-        return '({}).p_{}({}):{}=>{}'.format(self.entity, self.name, self.size, self.type, self._connection)
-    else:
-      if self._connection is None:
-        return '({}).p_{}:{}'.format(self.entity, self.name, self.type)
-      else:
-        return '({}).p_{}:{}=>{}'.format(self.entity, self.name, self.type, self._connection)
+        if self._connection is None:
+          return '({}).p_{}:{}'.format(self.entity, self.name, self.type)
+        else:
+          return '({}).p_{}:{}=>{}'.format(self.entity, self.name, self.type, self._connection)
+    except AttributeError:
+      return safe_str(self)
 
   def connect(self, to):
     DFACCTOAssert(self._connection is None or self._connection == to,
@@ -102,11 +105,14 @@ class Port(Connectable, Instantiable, EntityElement):
       self.entity.identifiers.register(self.identifier_ms, self)
       self.entity.identifiers.register(self.identifier_sm, self)
 
-  def __str__(self): #TODO-lw add vector info
-    if self.is_vector:
-      return '({}).p_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
-    else:
-      return '({}).p_{}:{}'.format(self.entity, self.name, self.type)
+  def __str__(self):
+    try:
+      if self.is_vector:
+        return '({}).p_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
+      else:
+        return '({}).p_{}:{}'.format(self.entity, self.name, self.type)
+    except:
+      return safe_str(self)
 
   def instantiate(self, inst_entity):
     return InstPort(self, inst_entity)

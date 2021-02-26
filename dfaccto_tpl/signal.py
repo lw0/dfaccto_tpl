@@ -1,3 +1,4 @@
+from .util import safe_str
 from .common import Connectable
 from .element import EntityElement
 
@@ -19,14 +20,19 @@ class Signal(Connectable, EntityElement):
       self.entity.identifiers.register(self.identifier_sm, self)
 
   def __str__(self):
-    if self.is_vector:
-      if self.type is None:
-        return '({}).s_{}({})?'.format(self.entity, self.name, self.size)
+    try:
+      if self.knows_type:
+        type_str = ':{}'.format(self.type)
       else:
-        return '({}).s_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
-    else:
-      if self.type is None:
-        return '({}).s_{}?'.format(self.entity, self.name)
+        type_str = '?'
+      if self.knows_cardinality:
+        if self.is_vector:
+          size_str = '({})'.format(self.size if self.knows_size else '')
+        else:
+          size_str = ''
       else:
-        return '({}).s_{}:{}'.format(self.entity, self.name, self.type)
+        size_str = '?'
+      return '({}).s_{}{}{}'.format(self.entity, self.name, size_str, type_str)
+    except:
+      return safe_str(self)
 

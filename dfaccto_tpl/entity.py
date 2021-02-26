@@ -1,4 +1,4 @@
-from .util import Registry, IndexWrapper
+from .util import Registry, IndexWrapper, safe_str
 from .signal import Signal
 from .port import Port
 from .generic import Generic
@@ -89,7 +89,10 @@ class InstEntity(EntityCommon, Instantiable, Element):
     self._parent.identifiers.register(self.identifier, self)
 
   def __str__(self):
-    return '({}).i_{}:{}'.format(self.parent, self.name, self.base)
+    try:
+      return '({}).i_{}:{}'.format(self.parent, self.name, self.base)
+    except:
+      return safe_str(self)
 
   @property
   def parent(self):
@@ -113,7 +116,10 @@ class Entity(EntityCommon, Instantiable, Element):
 
 
   def __str__(self):
-    return self.name
+    try:
+      return self.name
+    except:
+      return safe_str(self)
 
   def generic(self, name, type, size_generic_name):
     return Generic(self, name, type, size_generic_name)

@@ -1,5 +1,5 @@
 from .common import HasProps
-from .util import DFACCTOError, Registry
+from .util import DFACCTOError, Registry, safe_str
 
 
 class Context(HasProps):
@@ -17,7 +17,10 @@ class Context(HasProps):
     self.props.clear()
 
   def __str__(self):
-    return '<global>'
+    try:
+      return '<global>'
+    except:
+      return safe_str(self)
 
   @property
   def identifiers(self):

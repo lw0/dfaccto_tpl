@@ -12,7 +12,9 @@ p.Typ('Logic', Simple,
 
 p.Typ('Data', Simple,
       x_width=32,
-      x_definition='{{>unsigned.part}}')
+      x_definition='{{>t_unsigned.part}}')
+p.Con('DataNull', 'Data', value=0,
+      x_definition='{{>c_unsigned.part}}')
 
 p.Typ('Handshake', Complex,
       x_definition='{{>handshake.part}}')

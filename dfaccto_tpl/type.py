@@ -3,7 +3,7 @@ from enum import Enum
 
 from .common import HasProps
 from .element import PackageElement
-from .util import DFACCTOAssert
+from .util import DFACCTOAssert, safe_str
 
 
 class Type(PackageElement, HasProps):
@@ -24,7 +24,10 @@ class Type(PackageElement, HasProps):
     self._derivates = {self.role: self}
 
   def __str__(self):
-    return '({}).t{}_{}'.format(self.package, self.role, self.name)
+    try:
+      return '({}).t{}_{}'.format(self.package, self.role, self.name)
+    except:
+      return safe_str(self)
 
   def derive(self, role):
     DFACCTOAssert(self._derived_from is None,

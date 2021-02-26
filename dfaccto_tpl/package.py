@@ -1,6 +1,8 @@
-from .util import Registry
+from .util import Registry, safe_str
 from .common import HasProps
 from .element import Element
+from .type import Type
+from .constant import Constant
 
 
 class Package(Element, HasProps):
@@ -17,7 +19,10 @@ class Package(Element, HasProps):
     self.context.identifiers.register(self.identifier, self)
 
   def __str__(self):
-    return self.name
+    try:
+      return self.name
+    except:
+      return safe_str(self)
 
   @property
   def has_role(self):
@@ -34,5 +39,11 @@ class Package(Element, HasProps):
   @property
   def identifiers(self):
     return self._identifiers
+
+  def add_type(self, name, role, props):
+    return Type(self, name, role, props)
+
+  def add_constant(self, name, type, size_name, value, props):
+    return Constant(self, name, type, size_name, value, props=props)
 
 

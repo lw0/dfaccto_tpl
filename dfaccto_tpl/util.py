@@ -20,6 +20,12 @@ def Seq(*items, f):
     result.extend(item.format(idx) for item in items)
   return result
 
+def safe_str(obj):
+  try:
+    return '{}({})'.format(type(obj).__name__,
+                           ' '.join('{}={}'.format(k,v) for k,v in vars(self).items()))
+  except:
+    return repr(obj)
 
 class IndexedObj():
   def __init__(self, obj, idx, len):
