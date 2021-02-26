@@ -1,5 +1,6 @@
 from .util import Registry
-from .common import Element, HasProps
+from .common import HasProps
+from .element import Element
 
 
 class Package(Element, HasProps):
@@ -21,10 +22,6 @@ class Package(Element, HasProps):
   @property
   def has_role(self):
     return False
-
-  @property
-  def is_definite(self):
-    return True
 
   @property
   def types(self):

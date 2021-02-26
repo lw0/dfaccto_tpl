@@ -1,190 +1,9 @@
 from collections import defaultdict
+import collections.abc as abc
 
-from .util import DFACCTOError, DFACCTOAssert, ValueContainer, IndexedObj
-
-
-class Element:
-  def __init__(self, context, name, identifier_pattern, has_vector=False):
-    self._context = context
-    self._name = name
-    self._identifier_pattern = identifier_pattern
-    self._identifier = None
-    self._identifier_ms = None
-    self._identifier_sm = None
-    self._identifier_v = None
-    self._identifier_v_ms = None
-    self._identifier_v_sm = None
-    self._has_vector = has_vector
-
-  @property
-  def context(self):
-    return self._context
-
-  @property
-  def name(self):
-    return self._name
-
-  @property
-  def identifier(self):
-    if self._identifier is None:
-      if self.has_role:
-        if self.is_definite and self.role.is_simple:
-          self._identifier = self._identifier_pattern.format(name=self._name,
-                                                             mode=self.cmode,
-                                                             vec='', dir='')
-      else:
-        self._identifier = self._identifier_pattern.format(name=self._name,
-                                                           mode='',
-                                                           vec='', dir='')
-    return self._identifier
-
-  @property
-  def identifier_ms(self):
-    if self._identifier_ms is None:
-      if self.has_role and self.is_definite and self.role.is_complex:
-        self._identifier_ms = self._identifier_pattern.format(name=self._name,
-                                                              mode=self.cmode_ms,
-                                                              vec='', dir='_ms')
-    return self._identifier_ms
-
-  @property
-  def identifier_sm(self):
-    if self._identifier_sm is None:
-      if self.has_role and self.is_definite and self.role.is_complex:
-        self._identifier_sm = self._identifier_pattern.format(name=self._name,
-                                                              mode=self.cmode_sm,
-                                                              vec='', dir='_sm')
-    return self._identifier_sm
-
-  @property
-  def identifier_v(self):
-    if self._has_vector and self._identifier_v is None:
-      if self.has_role:
-        if self.is_definite and self.role.is_simple:
-          self._identifier_v = self._identifier_pattern.format(name=self._name,
-                                                               mode=self.cmode,
-                                                               vec='_v', dir='')
-      else:
-        self._identifier_v = self._identifier_pattern.format(name=self._name,
-                                                             mode='',
-                                                             vec='_v', dir='')
-    return self._identifier_v
-
-  @property
-  def identifier_v_ms(self):
-    if self._has_vector and self._identifier_v_ms is None:
-      if self.has_role and self.is_definite and self.role.is_complex:
-        self._identifier_v_ms = self._identifier_pattern.format(name=self._name,
-                                                                mode=self.cmode_ms,
-                                                                vec='_v', dir='_ms')
-    return self._identifier_v_ms
-
-  @property
-  def identifier_v_sm(self):
-    if self._has_vector and self._identifier_v_sm is None:
-      if self.has_role and self.is_definite and self.role.is_complex:
-        self._identifier_v_sm = self._identifier_pattern.format(name=self._name,
-                                                                mode=self.cmode_sm,
-                                                                vec='_v', dir='_sm')
-    return self._identifier_v_sm
+from .util import DFACCTOError, DFACCTOAssert, IndexedObj, ValueStore
 
 
-class EntityElement(Element):
-  def __init__(self, entity, name, identifier_pattern, has_vector=False):
-    Element.__init__(self, entity.context, name, identifier_pattern, has_vector)
-    self._entity = entity
-
-  @property
-  def entity(self):
-    return self._entity
-
-  @property
-  def qualified(self):
-    return self.identifier
-
-  @property
-  def qualified_ms(self):
-    return self.identifier_ms
-
-  @property
-  def qualified_sm(self):
-    return self.identifier_sm
-
-  @property
-  def qualified_v(self):
-    return self.identifier_v
-
-  @property
-  def qualified_v_ms(self):
-    return self.identifier_v_ms
-
-  @property
-  def qualified_v_sm(self):
-    return self.identifier_v_sm
-
-
-class PackageElement(Element):
-  def __init__(self, package, name, identifier_pattern, has_vector=False):
-    Element.__init__(self, package.context, name, identifier_pattern, has_vector)
-    self._package = package
-    self._qualified = None
-    self._qualified_ms = None
-    self._qualified_sm = None
-    self._qualified_v = None
-    self._qualified_v_ms = None
-    self._qualified_v_sm = None
-
-  @property
-  def package(self):
-    return self._package
-
-  @property
-  def qualified(self):
-    if self._qualified is None:
-      ident = self.identifier
-      if ident is not None:
-        self._qualified = '{}.{}'.format(self.package.identifier, ident)
-    return self._qualified
-
-  @property
-  def qualified_ms(self):
-    if self._qualified_ms is None:
-      ident = self.identifier_ms
-      if ident is not None:
-        self._qualified_ms = '{}.{}'.format(self.package.identifier, ident)
-    return self._qualified_ms
-
-  @property
-  def qualified_sm(self):
-    if self._qualified_sm is None:
-      ident = self.identifier_sm
-      if ident is not None:
-        self._qualified_sm = '{}.{}'.format(self.package.identifier, ident)
-    return self._qualified_sm
-
-  @property
-  def qualified_v(self):
-    if self._qualified_v is None:
-      ident = self.identifier_v
-      if ident is not None:
-        self._qualified_v = '{}.{}'.format(self.package.identifier, ident)
-    return self._qualified_v
-
-  @property
-  def qualified_v_ms(self):
-    if self._qualified_v_ms is None:
-      ident = self.identifier_v_ms
-      if ident is not None:
-        self._qualified_v_ms = '{}.{}'.format(self.package.identifier, ident)
-    return self._qualified_v_ms
-
-  @property
-  def qualified_v_sm(self):
-    if self._qualified_v_sm is None:
-      ident = self.identifier_v_sm
-      if ident is not None:
-        self._qualified_v_sm = '{}.{}'.format(self.package.identifier, ident)
-    return self._qualified_v_sm
 
 
 class Instantiable:
@@ -216,38 +35,146 @@ class HasProps:
 
 
 class Typed:
-  def __init__(self, type=None, *, on_type_set=None):
-    self._type = None
+  def __init__(self, type=None, size=None, *, on_type_set=None):
+    # size may be None (unknown if vector), False (scalar), ValueContainer (vector), others wrapped in ValueContainer
+    self._type = type
     self._on_type_set = on_type_set
+    self._type = None
     self._set_type(type)
+    self._size = None
+    self._set_size(size)
+
+  def adapt(self, other, part_of=None):
+    # concerns: check type and multiplicity compatibility
+    if isinstance(other, Typed):
+      if self._type is None:
+        # only signals may have unset types, so use a signal type here
+        self._set_type(other._type.base)
+      elif other._type is None:
+        # only signals may have unset types, so use a signal type here
+        other._set_type(self._type.base)
+      elif not self._type.base.is_compatible(other._type):
+        raise DFACCTOError("Type of {} is incompatible with {}".format(self, other))
+
+      if part_of is None:
+        if self.knows_cardinality and other.knows_cardinality:
+          if self.is_scalar and other.is_scalar:
+            pass #nothing to do, as both _size fields are already set
+          elif self.is_vector and other.is_vector:
+            if self.knows_size and other.knows_size:
+              DFACCTOAssert(self.size == other.size,
+                'Can not adapt vector {} to vector {} of different size'.format(self, other))
+            elif other.knows_size:
+              other._set_size(self._size)
+            else: # only other knows size or both do not know
+              self._set_size(other._size)
+          elif self.is_vector:
+            raise DFACCTOError(
+              'Can not adapt vector {} to scalar {}'.format(self, other))
+          else: # self.is_scalar
+            raise DFACCTOError(
+              'Can not adapt scalar {} to vector {}'.format(self, other))
+        elif self.knows_cardinality:
+          other._set_size(self._size)
+        elif other.knows_cardinality:
+          self._set_size(other._size)
+        # impossible that neither knows cardinality,
+        # as only signals can be in this state
+        # and they can not be connected together
+      else:
+        if self.knows_cardinality:
+          DFACCTOAssert(self.is_vector,
+            'Can not adapt scalar {} to partial'.format(self))
+          if self.knows_size:
+            DFACCTOAssert(self.size == part_of,
+              'Can not adapt vector {} to partial of {} elements'.format(self, part_of))
+          else:
+            self._set_size(part_of)
+        else:
+          self._set_size(part_of)
+        if other.knows_cardinality:
+          DFACCTOAssert(other.is_scalar,
+            'Can not adapt vector {} as partial, which must be scalar.'.format(other))
+        else:
+          other._set_size(False)
+    else:
+      # plain values are considered untyped scalars
+      #  unless part_of specifies an untyped vector
+      # do not touch _type
+      if part_of is None:
+        other_is_sequence = isinstance(other, abc.Sequence) and not isinstance(other, str)
+        if self.knows_cardinality:
+          if self.is_scalar and not other_is_sequence:
+            pass # _size already correctly set to False
+          elif self.is_vector and other_is_sequence:
+            if self.knows_size:
+              DFACCTOAssert(self.size == len(other),
+                'Can not adapt vector {} to list "{}" of different length {}'.format(self, other, len(other)))
+            else:
+              self._set_size(len(other))
+          elif self.is_vector:
+            raise DFACCTOError(
+              'Can not adapt vector {} to non-list "{}"'.format(self, other))
+          else: # self.is_vector
+            raise DFACCTOError(
+              'Can not adapt scalar {} to list "{}"'.format(self, other))
+        else:
+          self._set_size(other_is_sequence and len(other))
+      else:
+        if self.knows_cardinality:
+          DFACCTOAssert(self.is_vector,
+            'Can not adapt scalar {} to partial'.format(self))
+          if self.knows_size:
+            DFACCTOAssert(self.size == part_of,
+              'Can not adapt vector {} to partial of {} elements'.format(self, part_of))
+          else:
+            self._set_size(part_of)
+        else:
+          self._set_size(part_of)
 
   def _set_type(self, type):
-    if self._type is None:
-      self._type = type
-      if self._type is not None and self._on_type_set is not None:
-        self._on_type_set()
-    elif not self._type.is_compatible(type):
-      raise DFACCTOError("Type of {} is already set and may not be changed".format(self))
+    self._type = type
+    if self._type is not None and self._on_type_set is not None:
+      self._on_type_set()
 
-  @property
-  def is_definite(self):
-    return self._type is not None
+  def _set_size(self, size):
+    #concerns: auto-create ValueContainer for non-false values
+    #          ensure that there is no infinite recursion...
+    if self._size is None:
+      if size is False:
+        self._size = False
+      elif isinstance(size, ValueContainer):
+        self._size = size
+      elif size is not None:
+        self._size = ValueContainer(type=None, size=False, value=size)
+      # size is None: no modification
+    elif isinstance(self._size, ValueContainer): #self.is_vector
+      self._size.assign(size)
+    else: # self._size is False
+      DFACCTOAssert(size is None or size is False,
+        'Can not set size of scalar {} to {}'.format(self, size))
+
 
   @property
   def has_role(self):
     return True
 
-  # @property
-  # def has_type(self):
-  #   return self._type is not None
-
   @property
-  def type(self):
-    return self._type
+  def knows_role(self):
+    return self._type is not None
 
   @property
   def role(self):
     return self._type and self._type.role
+
+
+  @property
+  def knows_type(self):
+    return self._type is not None
+
+  @property
+  def type(self):
+    return self._type
 
   @property
   def is_signal(self):
@@ -314,54 +241,61 @@ class Typed:
     return self._type and self._type.cmode_sm
 
 
-
-class Sized:
-  def __init__(self, size=None):
-    self._size = ValueContainer(size)
-
   @property
-  def size(self):
-    return self._size.value
-
-  @property
-  def has_size(self):
-    return self._size.value is not None
-
-  @property
-  def is_vector(self):
-    return self._size.value is not None and bool(self._size.value)
+  def knows_cardinality(self):
+    return self._size is not None
 
   @property
   def is_scalar(self):
-    return self._size.value is not None and not bool(self._size.value)
+    return self._size is False
 
-  def _set_size(self, size):
-    try:
-      self._size.assign(size)
-    except ValueError:
-      raise DFACCTOError('Size of {} is already set to {} and can not be changed to {}'.format(self, self._size, size))
+  @property
+  def is_vector(self):
+    return isinstance(self._size, ValueContainer)
+
+  @property
+  def knows_size(self):
+    return isinstance(self._size, ValueContainer) and self._size.value is not None
+
+  @property
+  def size(self):
+    return self._size.value if isinstance(self._size, ValueContainer) else None
 
 
-class Connectable(Typed, Sized):
+class ValueContainer(Typed, ValueStore):
+  def __init__(self, type, size, value=None):
+    self._idx = self._create(value)
+    Typed.__init__(self, type, size)
+    if value is not None:
+      self.assign(value)
+
+  @property
+  def value(self):
+    return self._get_value(self._idx)
+
+  @property
+  def has_value(self):
+    return self._get_value(self._idx) is not None
+
+  def assign(self, other):
+    self.adapt(other)
+    if isinstance(other, ValueContainer):
+      self._assign(self._idx, other._idx)
+    else:
+      self._set_value(self._idx, other)
+
+
+class Connectable(Typed):
 
   def __init__(self, type=None, size=None, *, on_type_set=None):
-    Typed.__init__(self, type, on_type_set=on_type_set)
-    Sized.__init__(self, size)
+    Typed.__init__(self, type, size, on_type_set=on_type_set)
 
     self._connections = defaultdict(list)
 
   def connect_port(self, port_inst, idx=None):
-    # only signals may have unset types, so use a signal type here
-    self._set_type(port_inst.type.base)
-    if idx is None:
-      self._set_size(port_inst.size)
-    else:
-      self._set_size(False)
-
     role = port_inst.type.role
     DFACCTOAssert(role.is_input or role.is_view or not len(self._connections[role]),
-      'Signal {} can not be connected to multiple ports of role {}'.format(self, role))
-    #TODO-lw make proper distinction between idx and not! perhaps dict()
+      'Connectable {} can not be connected to multiple ports of role {}'.format(self, role))
     self._connections[role].append(IndexedObj(port_inst, idx, None))
 
   # TODO-lw flatten and IndexWrapper?

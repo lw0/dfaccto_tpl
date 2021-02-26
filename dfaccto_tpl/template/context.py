@@ -50,7 +50,8 @@ class Context:
 
   def get_section(self, key):
     val = self._get_value(key)
-    if not val:
+    if val is None or val is False:
+      # exclude integer 0 from falsey values!
       return []
     elif isinstance(val, str):
       return [val]

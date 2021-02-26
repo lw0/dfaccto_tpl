@@ -1,18 +1,18 @@
 Inc('simple_types.py')
 
 
-Ent('Inner', g_DataWidth='Size',
+Ent('Inner', g_DataWidth='Size', g_PatternLength='Size', g_Pattern=('Integer', 'PatternLength'),
     ps_hsIn='simple.Handshake', pm_hsOut='simple.Handshake',
     pi_dataIn=('simple.Data', 'DataWidth'),
     po_dataOut=('simple.Data', 'DataWidth'),
     po_done='simple.Logic')
 
-Ent('Barrier', g_PortCount='Size',
+Ent('Barrier', g_PortCount='Size', g_MaskCount='Size', g_Mask=('Integer', 'MaskCount'),
     pi_doneIn=('Logic', 'PortCount'),
     po_done='Logic')
 
 
-e=Ent('Toplevel', g_DataWidth='Size',
+e=Ent('Toplevel', g_DataWidth='Size', g_MaskCount='Size', g_Mask=('Integer', 'MaskCount'),
       ps_hsIn='Handshake',
       pm_hsOut='Handshake',
       pi_dataIn=('Data', 'DataWidth'),
@@ -21,6 +21,7 @@ e=Ent('Toplevel', g_DataWidth='Size',
       x_templates={'entity.vhd': 'Toplevel.vhd'})
 
 e.Ins('Inner', name='mid',
+      g_Pattern=(1,2,5),
       p_hsIn='hsIntFirst',
       p_hsOut='hsIntMid',
       p_dataIn='dataIntFirst',
@@ -28,6 +29,7 @@ e.Ins('Inner', name='mid',
       p_done='doneMid')
 
 e.Ins('Inner', name='first',
+      g_Pattern=(2,3),
       p_hsIn='hsIn',
       p_hsOut='hsIntFirst',
       p_dataIn='dataIn',
@@ -35,6 +37,7 @@ e.Ins('Inner', name='first',
       p_done='doneFirst')
 
 e.Ins('Inner', name='last',
+      g_Pattern=(1,2,4,8),
       p_hsIn='hsIntMid',
       p_hsOut='hsOut',
       p_dataIn='dataIntMid',

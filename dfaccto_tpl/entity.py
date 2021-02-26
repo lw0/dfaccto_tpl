@@ -2,8 +2,8 @@ from .util import Registry, IndexWrapper
 from .signal import Signal
 from .port import Port
 from .generic import Generic
-from .common import Instantiable, Element, HasProps
-
+from .common import Instantiable, HasProps
+from .element import Element
 
 class EntityCommon(HasProps):
   def __init__(self, props):
@@ -19,10 +19,6 @@ class EntityCommon(HasProps):
   @property
   def has_role(self):
     return False
-
-  @property
-  def is_definite(self):
-    return True
 
   @property
   def generics(self):

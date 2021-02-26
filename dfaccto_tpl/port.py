@@ -1,16 +1,17 @@
 import collections.abc as abc
 
-from .util import DFACCTOAssert, IndexWrapper
-from .common import Typed, Sized, Connectable, Instantiable, EntityElement
+from .util import DFACCTOAssert, IndexWrapper, DFACCTOError
+from .common import Typed, Connectable, Instantiable
+from .element import EntityElement
 
 
-class InstPort(Typed, Sized, Instantiable, EntityElement):
+class InstPort(Typed, Instantiable, EntityElement):
   def __init__(self, port, inst_entity):
     inst_size_generic = port.size_generic and inst_entity.generics.lookup(port.size_generic.name)
     EntityElement.__init__(self, inst_entity, port.name, 'p{mode}_{name}{dir}')
     Instantiable.__init__(self, port)
-    Sized.__init__(self, inst_size_generic or False) # InstGeneric is ValueContainer and will propagate
-    Typed.__init__(self, port.type, on_type_set=self._register_identifiers)
+    # InstGeneric is ValueContainer and will propagate
+    Typed.__init__(self, port.type, inst_size_generic or False, on_type_set=self._register_identifiers)
 
     self._size_generic = inst_size_generic
     self._connection = None
@@ -41,16 +42,18 @@ class InstPort(Typed, Sized, Instantiable, EntityElement):
       'Can not reconnect port {} to {}'.format(self, to))
 
     if isinstance(to, Connectable):
+      self.adapt(to)
       to.connect_port(self)
     elif isinstance(to, abc.Sequence):
       DFACCTOAssert(all(isinstance(part, Connectable) for part in to),
         "Vector port {} connection list expects ports or signals".format(self))
-      for idx, connectable in enumerate(to):
-        connectable.connect_port(self, idx)
-      self._size_generic.assign(len(to))
+      vec = len(to)
+      for idx, part in enumerate(to):
+        self.adapt(part, part_of=vec)
+        part.connect_port(self, idx)
     else:
-      DFACCTOAssert(False,
-        "Vector port {} connection expects a port, signal or list of those".format(self))
+      raise DFACCTOError(
+        "Port {} connection expects a port, signal or list of those".format(self))
 
     self._connection = to
 

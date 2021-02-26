@@ -1,4 +1,5 @@
-from .common import Connectable, EntityElement
+from .common import Connectable
+from .element import EntityElement
 
 
 class Signal(Connectable, EntityElement):

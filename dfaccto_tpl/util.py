@@ -10,6 +10,7 @@ class DFACCTOError(Exception):
 
 def DFACCTOAssert(condition, msg):
   if not condition:
+    breakpoint()
     raise DFACCTOError(msg)
 
 
@@ -146,13 +147,14 @@ class UnionFind:
       print(' {:d}: {!s}'.format(root, idx_set))
 
 
-class ValueContainer:
+class ValueStore:
 
   _registry = UnionFind()
   _values = dict()
 
   @classmethod
-  def _create(cls, val):
+  def _create(cls, val=None):
+    """Create a new independent value index and initialize with val if not None"""
     idx = cls._registry.new()
     if val is not None:
       root = cls._registry.find(idx)
@@ -160,45 +162,30 @@ class ValueContainer:
     return idx
 
   @classmethod
-  def _value(cls, idx):
+  def _get_value(cls, idx):
+    """Get value for idx if already set or None otherwise """
     root = cls._registry.find(idx)
     return cls._values.get(root)
 
   @classmethod
   def _set_value(cls, idx, val):
+    """Set and possibly override value for idx unless val is None"""
     root = cls._registry.find(idx)
-    if root not in cls._values:
-      if val is not None:
-        cls._values[root] = val
-    else:
-      if cls._values[root] != val:
-        raise ValueError("Value is already set and may not be changed")
+    if val is not None:
+      cls._values[root] = val
 
   @classmethod
   def _assign(cls, idx_a, idx_b):
-    val_a = cls._value(idx_a)
-    val_b = cls._value(idx_b)
-    if val_b is None or val_a == val_b:
-      cls._registry.union(idx_a, idx_b)
-    elif val_a is None:
+    """
+    Join idx_a and idx_b to refer to the same value.
+    If either is None the value of the other index is set for both.
+    If neither is None, idx_b gets receives the value of idx_a.
+    """
+    val_a = cls._get_value(idx_a)
+    val_b = cls._get_value(idx_b)
+    if val_a is None:
       cls._registry.union(idx_b, idx_a)
     else:
-      raise ValueError("Can not assign containers with different values")
+      cls._registry.union(idx_a, idx_b)
 
-  def __init__(self, value=None):
-    self._idx = self._create(value)
-
-  @property
-  def value(self):
-    return self._value(self._idx)
-
-  @property
-  def has_value(self):
-    return self._value(self._idx) is not None
-
-  def assign(self, other):
-    if isinstance(other, ValueContainer):
-      self._assign(self._idx, other._idx)
-    else:
-      self._set_value(self._idx, other)
 

@@ -1,7 +1,8 @@
 from copy import copy
 from enum import Enum
 
-from .common import HasProps, PackageElement
+from .common import HasProps
+from .element import PackageElement
 from .util import DFACCTOAssert
 
 
@@ -44,11 +45,11 @@ class Type(PackageElement, HasProps):
     return self._role.is_compatible(other._role)
 
   @property
-  def is_definite(self):
+  def has_role(self):
     return True
 
   @property
-  def has_role(self):
+  def knows_role(self):
     return True
 
   @property

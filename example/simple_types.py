@@ -4,6 +4,9 @@ p=Pkg('simple',
 p.Typ('Size', Simple, x_min=0,
       x_definition='{{>integer.part}}')
 
+p.Typ('Integer', Simple,
+      x_definition='{{>integer.part}}')
+
 p.Typ('Logic', Simple,
       x_definition='{{>logic.part}}')
 

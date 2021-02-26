@@ -71,20 +71,20 @@ begin
 {{/  is_connected}}
 {{#  connections}}
 {{#   is_simple}}
-      {{'identifier}}({{_idx}}) => {{connection.identifier}}{{#_last}}{{#'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
+      {{'identifier}}({{_idx}}) => {{identifier}}{{#_last}}{{#'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
 {{/   is_simple}}
 {{#   is_complex}}
-      {{'identifier_ms}}({{_idx}}) => {{connection.identifier_ms}},
-      {{'identifier_sm}}({{_idx}}) => {{connection.identifier_sm}}{{#_last}}{{#'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
+      {{'identifier_ms}}({{_idx}}) => {{identifier_ms}},
+      {{'identifier_sm}}({{_idx}}) => {{identifier_sm}}{{#_last}}{{#'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
 {{/   is_complex}}
 {{/  connections}}
 {{#  connection}}
 {{#   is_simple}}
-      {{'identifier}} => {{connection.identifier}}{{#_last}});{{|_last}},{{/_last}}
+      {{'identifier}} => {{identifier}}{{#_last}});{{|_last}},{{/_last}}
 {{/   is_simple}}
 {{#   is_complex}}
-      {{'identifier_ms}} => {{connection.identifier_ms}},
-      {{'identifier_sm}} => {{connection.identifier_sm}}{{#_last}});{{|_last}},{{/_last}}
+      {{'identifier_ms}} => {{identifier_ms}},
+      {{'identifier_sm}} => {{identifier_sm}}{{#_last}});{{|_last}},{{/_last}}
 {{/   is_complex}}
 {{/  connection}}
 {{/ ports}}
