@@ -81,7 +81,7 @@ class InstPort(Typed, Instantiable, EntityElement):
     return self._connection is not None
 
 
-class Port(Connectable, Instantiable, EntityElement):
+class Port(EntityElement, Typed, Connectable, Instantiable):
   def __init__(self, entity, name, type, size_generic_name=None):
     # size_generic = None
     # size = False
@@ -92,8 +92,9 @@ class Port(Connectable, Instantiable, EntityElement):
     # Generic or False are not ValueContainers, size will be determined here
 
     EntityElement.__init__(self, entity, name, 'p{mode}_{name}{dir}')
+    Typed.__init__(self, type, size_generic or False)
+    Connectable.__init__(self)
     Instantiable.__init__(self)
-    Connectable.__init__(self, type, size_generic or False)
 
     self._size_generic = size_generic #TODO-lw refactor move into size_generic assignment
 

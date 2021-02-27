@@ -1,7 +1,7 @@
 import collections.abc as abc
 
 from .util import DFACCTOAssert, safe_str
-from .common import Instantiable, Typed, ValueContainer
+from .common import Instantiable, Typed, ValueContainer, Connectable
 from .element import EntityElement
 
 class InstGeneric(ValueContainer, Instantiable, EntityElement):
@@ -42,14 +42,15 @@ class InstGeneric(ValueContainer, Instantiable, EntityElement):
   # adapt() by ValueContainer
 
 
-class Generic(Typed, Instantiable, EntityElement):
+class Generic(EntityElement, Typed, Connectable, Instantiable):
   def __init__(self, entity, name, type, size_generic_name=None):
     self._size_generic = size_generic_name and entity.generics.lookup(size_generic_name)
     # Generic or False are not ValueContainers, size will be determined here
 
-    Typed.__init__(self, type, self._size_generic or False)
-    Instantiable.__init__(self)
     EntityElement.__init__(self, entity, name, 'g_{name}{dir}')
+    Typed.__init__(self, type, self._size_generic or False)
+    Connectable.__init__(self, is_value=True)
+    Instantiable.__init__(self)
 
     DFACCTOAssert(self._size_generic is None or self._size_generic.is_scalar,
       'Size generic {} for vector generic {} can not itself be a vector'.format(self._size_generic, self))

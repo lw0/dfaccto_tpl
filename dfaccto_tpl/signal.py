@@ -1,13 +1,13 @@
 from .util import safe_str
-from .common import Connectable
+from .common import Connectable, Typed
 from .element import EntityElement
 
 
-class Signal(Connectable, EntityElement):
-
+class Signal(EntityElement, Typed, Connectable):
   def __init__(self, entity, name, type=None, size=None):
     EntityElement.__init__(self, entity, name, 's_{name}{dir}')
-    Connectable.__init__(self, type, size, on_type_set=self._register_identifiers)
+    Typed.__init__(self, type, size, on_type_set=self._register_identifiers)
+    Connectable.__init__(self)
 
     self.entity.signals.register(self.name, self)
     self.entity.connectables.register(self.name, self)

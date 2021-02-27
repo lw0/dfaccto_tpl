@@ -307,17 +307,20 @@ class ValueContainer(Typed, ValueStore):
         self._set_value(self._idx, other)
 
 
-class Connectable(Typed):
-
-  def __init__(self, type=None, size=None, *, on_type_set=None):
-    Typed.__init__(self, type, size, on_type_set=on_type_set)
-
+class Connectable:
+  def __init__(self, is_value=False):
+    self._is_value = is_value
     self._connections = defaultdict(list)
 
   def connect_port(self, port_inst, idx=None):
     role = port_inst.type.role
-    DFACCTOAssert(role.is_input or role.is_view or not len(self._connections[role]),
-      'Connectable {} can not be connected to multiple ports of role {}'.format(self, role))
+    #TODO-lw use own role for collision check, to accomodate ports and values alike...
+    if self._is_value:
+      DFACCTOAssert(role.is_input or role.is_view,
+        'Value {} can only be connected to input or view ports, not {}'.format(self, port_inst))
+    else:
+      DFACCTOAssert(role.is_input or role.is_view or len(self._connections[role]) == 0,
+        'Connectable {} can not be connected to multiple ports of role {}'.format(self, role))
     self._connections[role].append(IndexedObj(port_inst, idx, None))
 
   # TODO-lw flatten and IndexWrapper?

@@ -8,7 +8,7 @@ Ent('Inner',
       ps_hsIn='simple.Handshake', pm_hsOut='simple.Handshake',
       pi_dataIn='simple.Data(DataWidth)',
       po_dataOut='simple.Data(DataWidth)',
-      # pi_dummy='Logic',
+      pi_dummy='Logic',
       po_done='simple.Logic')
 
 Ent('Barrier',
@@ -37,7 +37,7 @@ e.Ins('Inner', name='mid',
         p_hsOut=e.To('hsIntMid'),
         p_dataIn=e.To('dataIntFirst'),
         p_dataOut=e.To('dataIntMid'),
-        # p_dummy=e.Val('Dummy'),
+        p_dummy=e.Val('Dummy'),
         p_done=e.To('doneMid'))
 
 e.Ins('Inner', name='first',
@@ -46,7 +46,7 @@ e.Ins('Inner', name='first',
         p_hsOut=e.To('hsIntFirst'),
         p_dataIn=e.To('dataIn'),
         p_dataOut=e.To('dataIntFirst'),
-        # p_dummy=e.Val('LogicNull'),
+        p_dummy=e.Val('LogicNull'),
         p_done=e.To('doneFirst'))
 
 e.Ins('Inner', name='last',
@@ -55,7 +55,7 @@ e.Ins('Inner', name='last',
         p_hsOut=e.To('hsOut'),
         p_dataIn=e.To('dataIntMid'),
         p_dataOut=e.To('dataOut'),
-        # p_dummy=e.Val('LogicNull'),
+        p_dummy=e.Val('LogicNull'),
         p_done=e.To('doneLast'))
 
 e.Ins('Barrier',

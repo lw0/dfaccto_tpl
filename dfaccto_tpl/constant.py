@@ -1,14 +1,15 @@
-from .common import HasProps, ValueContainer
+from .common import HasProps, ValueContainer, Connectable
 from .element import PackageElement
 from .util import DFACCTOAssert, safe_str
 
 
-class Constant(ValueContainer, PackageElement, HasProps):
+class Constant(PackageElement, ValueContainer, Connectable, HasProps):
   def __init__(self, package, name, type, size_constant_name=None, value=None, *, props):
     self._size_constant = size_constant_name and package.constants.lookup(size_constant_name)
 
-    ValueContainer.__init__(self, type, self._size_constant or False, value)
     PackageElement.__init__(self, package, name, 'c_{name}{dir}')
+    ValueContainer.__init__(self, type, self._size_constant or False, value)
+    Connectable.__init__(self, is_value=True)
     HasProps.__init__(self, props)
 
     self.package.constants.register(self.name, self)
