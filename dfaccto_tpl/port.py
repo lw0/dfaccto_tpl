@@ -29,9 +29,9 @@ class InstPort(Typed, Instantiable, EntityElement):
     try:
       if self.is_vector:
         if self._connection is None:
-          return '({}).p_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
+          return '({}).p_{}:{}({})'.format(self.entity, self.name, self.type, self.size)
         else:
-          return '({}).p_{}({}):{}=>{}'.format(self.entity, self.name, self.size, self.type, self._connection)
+          return '({}).p_{}:{}({})=>{}'.format(self.entity, self.name, self.type, self.size, self._connection)
       else:
         if self._connection is None:
           return '({}).p_{}:{}'.format(self.entity, self.name, self.type)
@@ -108,7 +108,7 @@ class Port(Connectable, Instantiable, EntityElement):
   def __str__(self):
     try:
       if self.is_vector:
-        return '({}).p_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
+        return '({}).p_{}:{}({})'.format(self.entity, self.name, self.type, self.size)
       else:
         return '({}).p_{}:{}'.format(self.entity, self.name, self.type)
     except:

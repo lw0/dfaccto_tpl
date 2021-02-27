@@ -12,6 +12,8 @@ class Constant(ValueContainer, PackageElement, HasProps):
     HasProps.__init__(self, props)
 
     self.package.constants.register(self.name, self)
+    decl_name = self.package.declarations.unique_name(self.name) # Avoid collisions with type names
+    self.package.declarations.register(decl_name, self)
     if self.is_complex:
       self.package.identifiers.register(self.identifier_ms, self)
       self.package.identifiers.register(self.identifier_sm, self)
@@ -21,9 +23,9 @@ class Constant(ValueContainer, PackageElement, HasProps):
   def __str__(self):
     try:
       if self.is_vector:
-        return '({}).c_{}({}):{}:={}'.format(self.package, self.name)
+        return '({}).c_{}:{}({}):={}'.format(self.package, self.name, self.type, self.size, self.value)
       else:
-        return '({}).c_{}:{}:={}'.format(self.package, self.name)
+        return '({}).c_{}:{}:={}'.format(self.package, self.name, self.type, self.value)
     except:
       return safe_str(self)
 

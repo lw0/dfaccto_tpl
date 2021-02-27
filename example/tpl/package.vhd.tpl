@@ -5,14 +5,8 @@ use ieee.numeric_std.all;
 
 package {{identifier}} is
 
-{{#types}}
+{{#declarations}}
   {{*x_definition}}
 
-{{/types}}
-
-
-{{#constants}}
-  {{*x_definition}}
-
-{{/constants}}
+{{/declarations}}
 end {{identifier}};

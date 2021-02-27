@@ -24,9 +24,9 @@ class InstGeneric(ValueContainer, Instantiable, EntityElement):
     try:
       if self.is_vector:
         if self.has_value:
-          return '({}).g_{}({}):{}={}'.format(self.entity, self.name, self.size, self.type, self.value)
+          return '({}).g_{}:{}({})={}'.format(self.entity, self.name, self.type, self.size, self.value)
         else:
-          return '({}).g_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
+          return '({}).g_{}:{}({})'.format(self.entity, self.name, self.type, self.size)
       else:
         if self.has_value:
           return '({}).g_{}:{}={}'.format(self.entity, self.name, self.type, self.value)
@@ -54,7 +54,6 @@ class Generic(Typed, Instantiable, EntityElement):
     DFACCTOAssert(self._size_generic is None or self._size_generic.is_scalar,
       'Size generic {} for vector generic {} can not itself be a vector'.format(self._size_generic, self))
 
-
     self.entity.generics.register(self.name, self)
     if self.is_simple:
       self.entity.identifiers.register(self.identifier, self)
@@ -65,7 +64,7 @@ class Generic(Typed, Instantiable, EntityElement):
   def __str__(self):
     try:
       if self.is_vector:
-        return '({}).g_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
+        return '({}).g_{}:{}({})'.format(self.entity, self.name, self.type, self.size)
       else:
         return '({}).g_{}:{}'.format(self.entity, self.name, self.type)
     except:

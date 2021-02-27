@@ -12,6 +12,8 @@ class Type(PackageElement, HasProps):
     PackageElement.__init__(self, package, name, 't_{name}{vec}{dir}', has_vector=True)
     self._role = role
     self.package.types.register(self.name, self)
+    decl_name = self.package.declarations.unique_name(self.name) # Avoid collisions with constant names
+    self.package.declarations.register(decl_name, self)
     if self.role.is_simple:
       self.package.identifiers.register(self.identifier, self)
       self.package.identifiers.register(self.identifier_v, self)

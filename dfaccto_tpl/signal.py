@@ -32,7 +32,7 @@ class Signal(Connectable, EntityElement):
           size_str = ''
       else:
         size_str = '?'
-      return '({}).s_{}{}{}'.format(self.entity, self.name, size_str, type_str)
+      return '({}).s_{}{}{}'.format(self.entity, self.name, type_str, size_str)
     except:
       return safe_str(self)
 

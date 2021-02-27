@@ -74,10 +74,13 @@ class EntityCommon(HasProps):
 
 
 class InstEntity(EntityCommon, Instantiable, Element):
-  def __init__(self, entity, parent, name):
+  def __init__(self, entity, parent, name, props):
+    new_props = entity.props.copy()
+    new_props.update(props)
+
     Element.__init__(self, entity.context, name, 'i_{name}')
     Instantiable.__init__(self, entity)
-    EntityCommon.__init__(self, entity.props)
+    EntityCommon.__init__(self, new_props)
     self._parent = parent
 
     for generic in entity.generics.contents():
@@ -121,19 +124,33 @@ class Entity(EntityCommon, Instantiable, Element):
     except:
       return safe_str(self)
 
-  def generic(self, name, type, size_generic_name):
-    return Generic(self, name, type, size_generic_name)
+  def get_generic(self, name):
+    if self.generics.has(name):
+      return self.generics.lookup(name)
+    else:
+      raise DFACCTOError(
+        'Entity {} does not have a generic "{}"'.format(self, name))
 
-  def port(self, name, type, size_generic_name=None):
-    return Port(self, name, type, size_generic_name)
-
-  def instantiate(self, parent, name):
-    return InstEntity(self, parent, name)
+  def get_assignable(self, name, pkg_name=None):
+    if pkg_name is None and self.generics.has(name):
+      return self.generics.lookup(name)
+    else:
+      return self.context.get_constant(name, pkg_name)
 
   def get_connectable(self, name):
     if self.connectables.has(name):
       return self.connectables.lookup(name)
     return Signal(self, name)
+
+  def add_generic(self, name, type, size_generic_name):
+    return Generic(self, name, type, size_generic_name)
+
+  def add_port(self, name, type, size_generic_name):
+    return Port(self, name, type, size_generic_name)
+
+  def instantiate(self, parent, name, props):
+    return InstEntity(self, parent, name, props)
+
 
 
 

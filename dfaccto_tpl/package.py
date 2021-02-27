@@ -13,6 +13,7 @@ class Package(Element, HasProps):
 
     self._types = Registry()
     self._constants = Registry()
+    self._declarations = Registry()
     self._identifiers = Registry()
 
     self.context.packages.register(self.name, self)
@@ -37,8 +38,24 @@ class Package(Element, HasProps):
     return self._constants
 
   @property
+  def declarations(self):
+    return self._declarations
+
+  @property
   def identifiers(self):
     return self._identifiers
+
+  def get_type(self, type_name, pkg_name=None):
+    if pkg_name is None and self.types.has(type_name):
+      return self.types.lookup(type_name)
+    else:
+      return self.context.get_type(type_name, pkg_name)
+
+  def get_constant(self, const_name, pkg_name=None):
+    if pkg_name is None and self.constants.has(const_name):
+      return self.constants.lookup(const_name)
+    else:
+      return self.context.get_constant(const_name, pkg_name)
 
   def add_type(self, name, role, props):
     return Type(self, name, role, props)
