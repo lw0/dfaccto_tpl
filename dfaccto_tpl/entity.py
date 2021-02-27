@@ -142,11 +142,11 @@ class Entity(EntityCommon, Instantiable, Element):
       return self.connectables.lookup(name)
     return Signal(self, name)
 
-  def add_generic(self, name, type, size_generic_name):
-    return Generic(self, name, type, size_generic_name)
+  def add_generic(self, name, type, size_generic):
+    return Generic(self, name, type, size_generic)
 
-  def add_port(self, name, type, size_generic_name):
-    return Port(self, name, type, size_generic_name)
+  def add_port(self, name, type, size_generic):
+    return Port(self, name, type, size_generic)
 
   def instantiate(self, parent, name, props):
     return InstEntity(self, parent, name, props)

@@ -19,47 +19,47 @@ Ent('Barrier',
       po_done='Logic')
 
 
-e=Ent('Toplevel',
-      g_DataWidth='Size',
-      g_MaskCount='Size',
-      g_Mask='Integer(MaskCount)',
-      g_Dummy='Logic',
-        ps_hsIn='Handshake',
-        pm_hsOut='Handshake',
-        pi_dataIn='Data(DataWidth)',
-        po_dataOut='Data(DataWidth)',
-        po_done='Logic',
-      x_templates={'entity.vhd': 'Toplevel.vhd'})
+with Ent('Toplevel',
+         g_DataWidth='Size',
+         g_MaskCount='Size',
+         g_Mask='Integer(MaskCount)',
+         g_Dummy='Logic',
+           ps_hsIn='Handshake',
+           pm_hsOut='Handshake',
+           pi_dataIn='Data(DataWidth)',
+           po_dataOut='Data(DataWidth)',
+           po_done='Logic',
+         x_templates={'entity.vhd': 'Toplevel.vhd'}):
 
-e.Ins('Inner', name='mid',
+  Ins('Inner', name='mid',
       g_Pattern=(1,2,5),
-        p_hsIn=e.To('hsIntFirst'),
-        p_hsOut=e.To('hsIntMid'),
-        p_dataIn=e.To('dataIntFirst'),
-        p_dataOut=e.To('dataIntMid'),
-        p_dummy=e.Val('Dummy'),
-        p_done=e.To('doneMid'))
+        p_hsIn=To('hsIntFirst'),
+        p_hsOut=To('hsIntMid'),
+        p_dataIn=To('dataIntFirst'),
+        p_dataOut=To('dataIntMid'),
+        p_dummy=Val('Dummy'),
+        p_done=To('doneMid'))
 
-e.Ins('Inner', name='first',
+  Ins('Inner', name='first',
       g_Pattern=(2,3),
-        p_hsIn=e.To('hsIn'),
-        p_hsOut=e.To('hsIntFirst'),
-        p_dataIn=e.To('dataIn'),
-        p_dataOut=e.To('dataIntFirst'),
-        p_dummy=e.Val('LogicNull'),
-        p_done=e.To('doneFirst'))
+        p_hsIn=To('hsIn'),
+        p_hsOut=To('hsIntFirst'),
+        p_dataIn=To('dataIn'),
+        p_dataOut=To('dataIntFirst'),
+        p_dummy=Val('LogicNull'),
+        p_done=To('doneFirst'))
 
-e.Ins('Inner', name='last',
+  Ins('Inner', name='last',
       g_Pattern=(1,2,4,8),
-        p_hsIn=e.To('hsIntMid'),
-        p_hsOut=e.To('hsOut'),
-        p_dataIn=e.To('dataIntMid'),
-        p_dataOut=e.To('dataOut'),
-        p_dummy=e.Val('LogicNull'),
-        p_done=e.To('doneLast'))
+        p_hsIn=To('hsIntMid'),
+        p_hsOut=To('hsOut'),
+        p_dataIn=To('dataIntMid'),
+        p_dataOut=To('dataOut'),
+        p_dummy=Val('LogicNull'),
+        p_done=To('doneLast'))
 
-e.Ins('Barrier',
-      g_Mask=e.Val('Mask'),
-        p_doneIn=e.ToVec('doneFirst', 'doneMid', 'doneLast'),
-        p_done=e.To('done'))
+  Ins('Barrier',
+      g_Mask=Val('Mask'),
+        p_doneIn=ToVec('doneFirst', 'doneMid', 'doneLast'),
+        p_done=To('done'))
 

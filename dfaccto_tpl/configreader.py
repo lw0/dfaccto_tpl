@@ -3,7 +3,6 @@ import sys
 import traceback
 
 from .util import DFACCTOError, Seq
-from .role import Role
 from .context import Context
 from .frontend import Frontend
 
@@ -13,13 +12,18 @@ class ConfigReader:
     self._context = context or Context()
     self._frontend = Frontend(self._context)
     self._globals = {
-      'Inc': self.read,
-      'Simple': Role.Simple,
-      'Complex': Role.Complex,
-      'Seq': Seq,
-      'Gbl': self._frontend.Gbl,
-      'Pkg': self._frontend.Pkg,
-      'Ent': self._frontend.Ent }
+      'Inc':    self.read,
+      'Seq':    Seq,
+      'Gbl':    self._frontend.global_statement,
+      'Val':    self._frontend.assignable_reference,
+      'ValVec': self._frontend.assignable_vector_reference,
+      'Pkg':    self._frontend.package_declaration,
+      'Typ':    self._frontend.type_declaration,
+      'Con':    self._frontend.constant_declaration,
+      'Ent':    self._frontend.entity_declaration,
+      'Ins':    self._frontend.instance_declaration,
+      'To':     self._frontend.connectable_reference,
+      'ToVec':  self._frontend.connectable_vector_reference}
     self._executed = set()
     self._base_path = list()
 

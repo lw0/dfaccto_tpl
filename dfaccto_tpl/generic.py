@@ -7,10 +7,10 @@ from .role import Role
 
 class InstGeneric(ValueContainer, Instantiable, EntityElement):
   def __init__(self, generic, inst_entity):
-    self._size_generic = generic.size_generic and inst_entity.generics.lookup(generic.size_generic.name)
+    size_generic_inst = inst_entity.generics.lookup(generic.size.name) if generic.is_vector else False
 
     # InstGeneric is ValueContainer and will propagate
-    ValueContainer.__init__(self, generic.type, self._size_generic or False)
+    ValueContainer.__init__(self, generic.type, size_generic_inst)
     Instantiable.__init__(self, generic)
     EntityElement.__init__(self, inst_entity, generic.name, 'g_{name}{dir}')
 
@@ -36,18 +36,9 @@ class InstGeneric(ValueContainer, Instantiable, EntityElement):
     except:
       return safe_str(self)
 
-  @property
-  def size_generic(self):
-    return self._size_generic
-
-  # adapt() by ValueContainer
-
 
 class Generic(EntityElement, Typed, Connectable, Instantiable):
-  def __init__(self, entity, name, type, size_generic_name=None):
-    self._size_generic = size_generic_name and entity.generics.lookup(size_generic_name)
-    # Generic or False are not ValueContainers, size will be determined here
-
+  def __init__(self, entity, name, type, size_generic):
     if type.is_complex:
       if type.is_signal:
         type = type.derive(Role.View)
@@ -60,12 +51,13 @@ class Generic(EntityElement, Typed, Connectable, Instantiable):
         raise DFACCTOError('Simple generics must have input role')
 
     EntityElement.__init__(self, entity, name, 'g_{name}{dir}')
-    Typed.__init__(self, type, self._size_generic or False)
+    # Generic or False are not ValueContainers, size will be determined here
+    Typed.__init__(self, type, size_generic or False)
     Connectable.__init__(self)
     Instantiable.__init__(self)
 
-    DFACCTOAssert(self._size_generic is None or self._size_generic.is_scalar,
-      'Size generic {} for vector generic {} can not itself be a vector'.format(self._size_generic, self))
+    DFACCTOAssert(size_generic is None or size_generic.is_scalar,
+      'Size generic {} for vector generic {} can not itself be a vector'.format(self.size, self))
 
     self.entity.generics.register(self.name, self)
     if self.is_simple:
@@ -86,9 +78,6 @@ class Generic(EntityElement, Typed, Connectable, Instantiable):
   def instantiate(self, inst_entity):
     return InstGeneric(self, inst_entity)
 
-  @property
-  def size_generic(self):
-    return self._size_generic
 
 
 

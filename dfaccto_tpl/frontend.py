@@ -1,4 +1,5 @@
 import collections.abc as abc
+from contextlib import contextmanager
 import re
 
 from .util import DFACCTOAssert, DFACCTOError
@@ -151,73 +152,46 @@ class Decoder:
 
 
 class Frontend:
-  def __init__(self, context, *, entity=None, package=None):
+  def __init__(self, context):
     self._context = context
-    self._entity = entity
+    self._package = None
+    self._entity = None
+
+  @contextmanager
+  def package_context(self, package):
     self._package = package
+    try:
+      yield package
+    finally:
+      self._package = None
 
+  @contextmanager
+  def entity_context(self, entity):
+    self._entity = entity
+    try:
+      yield entity
+    finally:
+      self._entity = None
 
-  def Gbl(self, **directives):
+  @property
+  def in_global_context(self):
+    return self._package is None and self._entity is None
+
+  @property
+  def in_package_context(self):
+    return self._package is not None
+
+  @property
+  def in_entity_context(self):
+    return self._entity is not None
+
+  def global_statement(self, **directives):
+    DFACCTOAssert(self.in_global_context, 'Global statement must appear in the global context')
     props = Decoder.read_props(directives)
     self._context.props.update(props)
     # TODO-lw deep update, so that multiple Gbl(x_templates={...}) extend templates dir!
 
-
-  def Pkg(self, name, **directives):
-    name = Decoder.name_value(name)
-    props = Decoder.read_props(directives)
-
-    package = Package(self._context, name, props)
-    return Frontend(self._context, package=package)
-
-
-  def Typ(self, name, simple=False, complex=False, **directives):
-    DFACCTOAssert(self._package is not None, 'Type declaration must appear in a package context')
-    name = Decoder.name_value(name)
-    role = Decoder.type_role_value(simple, complex)
-    props = Decoder.read_props(directives)
-
-    self._package.add_type(name, role, props)
-
-
-  def Con(self, name, type, value=None, **directives):
-    DFACCTOAssert(self._package is not None, 'Constant declaration must appear in a package context')
-    name = Decoder.name_value(name)
-    type_name, pkg_name, size_name = Decoder.type_value(type)
-    props = Decoder.read_props(directives)
-
-    type = self._package.get_type(type_name, pkg_name)
-    self._package.add_constant(name, type, size_name, value, props)
-
-
-  def Ent(self, name, **directives):
-    name = Decoder.name_value(name)
-    generics, ports, props = Decoder.read_entity(directives)
-
-    entity = Entity(self._context, name, **props)
-
-    for name, type_name, pkg_name, size_name in generics:
-      type = self._context.get_type(type_name, pkg_name)
-      # size = size_name and entity.get_generic(size_name)
-      entity.add_generic(name, type, size_name)
-
-    for name, role, type_name, pkg_name, size_name in ports:
-      type = self._context.get_type(type_name, pkg_name).derive(role)
-      # size = size_name and entity.get_generic(size_name)
-      entity.add_port(name, type, size_name)
-
-    return Frontend(self._context, entity=entity)
-
-  def To(self, name):
-    DFACCTOAssert(self._entity is not None, 'Connectable reference must appear in an entity context')
-    name = Decoder.name_value(name)
-    return self._entity.get_connectable(name)
-
-  def ToVec(self, *names):
-    DFACCTOAssert(self._entity is not None, 'Connectable reference must appear in an entity context')
-    return tuple(self.To(name) for name in names)
-
-  def Val(self, ref): # assign
+  def assignable_reference(self, ref):
     name, pkg_name = Decoder.ref_value(ref)
     if self._entity is not None:
       assignable = self._entity.get_assignable(name, pkg_name)
@@ -227,11 +201,64 @@ class Frontend:
       assignable = self._context.get_constant(name, pkg_name)
     return assignable
 
-  def ValVec(self, *refs):
-    return tuple(self.Val(ref) for ref in refs)
+  def assignable_vector_reference(self, *refs):
+    return tuple(self.assignable_reference(ref) for ref in refs)
 
-  def Ins(self, entity_name, name=None, index=None, **directives):
-    DFACCTOAssert(self._entity is not None, 'Instance declaration must appear in an entity context')
+  def package_declaration(self, name, **directives):
+    DFACCTOAssert(self.in_global_context, 'Package declaration must appear in the global context')
+    name = Decoder.name_value(name)
+    props = Decoder.read_props(directives)
+
+    package = Package(self._context, name, props)
+    return self.package_context(package)
+
+  def type_declaration(self, name, simple=False, complex=False, **directives):
+    DFACCTOAssert(self.in_package_context, 'Type declaration must appear in a package context')
+    name = Decoder.name_value(name)
+    role = Decoder.type_role_value(simple, complex)
+    props = Decoder.read_props(directives)
+
+    self._package.add_type(name, role, props)
+
+  def constant_declaration(self, name, type, value=None, **directives):
+    DFACCTOAssert(self.in_package_context, 'Constant declaration must appear in a package context')
+    name = Decoder.name_value(name)
+    type_name, pkg_name, size_name = Decoder.type_value(type)
+    props = Decoder.read_props(directives)
+
+    type = self._package.get_type(type_name, pkg_name)
+    self._package.add_constant(name, type, size_name, value, props)
+
+  def entity_declaration(self, name, **directives):
+    DFACCTOAssert(self.in_global_context, 'Entity declaration must appear in the global context')
+    name = Decoder.name_value(name)
+    generics, ports, props = Decoder.read_entity(directives)
+
+    entity = Entity(self._context, name, **props)
+
+    for name, type_name, pkg_name, size_name in generics:
+      type = self._context.get_type(type_name, pkg_name)
+      size = size_name and entity.get_generic(size_name)
+      entity.add_generic(name, type, size)
+
+    for name, role, type_name, pkg_name, size_name in ports:
+      type = self._context.get_type(type_name, pkg_name).derive(role)
+      size = size_name and entity.get_generic(size_name)
+      entity.add_port(name, type, size)
+
+    return self.entity_context(entity)
+
+  def connectable_reference(self, name):
+    DFACCTOAssert(self.in_entity_context, 'Connectable reference must appear in an entity context')
+    name = Decoder.name_value(name)
+    return self._entity.get_connectable(name)
+
+  def connectable_vector_reference(self, *names):
+    DFACCTOAssert(self.in_entity_context, 'Connectable reference must appear in an entity context')
+    return tuple(self.connectable_reference(name) for name in names)
+
+  def instance_declaration(self, entity_name, name=None, index=None, **directives):
+    DFACCTOAssert(self.in_entity_context, 'Instance declaration must appear in an entity context')
     entity_name = Decoder.name_value(entity_name)
     if name is None:
       name = entity_name[0].lower() + entity_name[1:]
