@@ -3,6 +3,7 @@ import collections.abc as abc
 from .util import DFACCTOAssert, safe_str
 from .common import Instantiable, Typed, ValueContainer, Connectable
 from .element import EntityElement
+from .role import Role
 
 class InstGeneric(ValueContainer, Instantiable, EntityElement):
   def __init__(self, generic, inst_entity):
@@ -47,9 +48,20 @@ class Generic(EntityElement, Typed, Connectable, Instantiable):
     self._size_generic = size_generic_name and entity.generics.lookup(size_generic_name)
     # Generic or False are not ValueContainers, size will be determined here
 
+    if type.is_complex:
+      if type.is_signal:
+        type = type.derive(Role.View)
+      elif not type.is_view:
+        raise DFACCTOError('Complex generics must have view role')
+    else:
+      if type.is_signal:
+        type = type.derive(Role.Input)
+      elif not type.is_input:
+        raise DFACCTOError('Simple generics must have input role')
+
     EntityElement.__init__(self, entity, name, 'g_{name}{dir}')
     Typed.__init__(self, type, self._size_generic or False)
-    Connectable.__init__(self, is_value=True)
+    Connectable.__init__(self)
     Instantiable.__init__(self)
 
     DFACCTOAssert(self._size_generic is None or self._size_generic.is_scalar,

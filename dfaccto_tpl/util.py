@@ -10,7 +10,6 @@ class DFACCTOError(Exception):
 
 def DFACCTOAssert(condition, msg):
   if not condition:
-    breakpoint()
     raise DFACCTOError(msg)
 
 
