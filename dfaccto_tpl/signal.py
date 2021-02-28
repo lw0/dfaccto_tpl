@@ -27,7 +27,7 @@ class Signal(EntityElement, Typed, Connectable):
         type_str = '?'
       if self.knows_cardinality:
         if self.is_vector:
-          size_str = '({})'.format(self.size if self.knows_size else '')
+          size_str = '({})'.format(self.size_value if self.knows_size else '')
         else:
           size_str = ''
       else:
@@ -35,4 +35,8 @@ class Signal(EntityElement, Typed, Connectable):
       return '({}).s_{}{}{}'.format(self.entity, self.name, type_str, size_str)
     except:
       return safe_str(self)
+
+  @property
+  def is_signal(self):
+    return True
 

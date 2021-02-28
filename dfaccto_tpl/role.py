@@ -54,11 +54,7 @@ class Role(Enum):
     return '!'
 
   @property
-  def is_signal(self):
-    return self.value in (0x3, 0xF0)
-
-  @property
-  def is_port(self):
+  def is_directed(self):
     return self.value in (0x1, 0x2, 0x10, 0x20, 0x40, 0x80)
 
   @property

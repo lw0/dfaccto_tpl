@@ -9,12 +9,12 @@ class Constant(PackageElement, ValueContainer, Connectable, HasProps):
     self._size_constant = size_constant_name and package.constants.lookup(size_constant_name)
 
     if type.is_complex:
-      if type.is_signal:
+      if not type.is_directed:
         type = type.derive(Role.View)
       elif not type.is_view:
         raise DFACCTOError('Complex constants must have view role')
     else:
-      if type.is_signal:
+      if not type.is_directed:
         type = type.derive(Role.Input)
       elif not type.is_input:
         raise DFACCTOError('Simple constants must have input role')
@@ -36,11 +36,15 @@ class Constant(PackageElement, ValueContainer, Connectable, HasProps):
   def __str__(self):
     try:
       if self.is_vector:
-        return '({}).c_{}:{}({}):={}'.format(self.package, self.name, self.type, self.size, self.value)
+        return '({}).c_{}:{}({}):={}'.format(self.package, self.name, self.type, self.size_value, self.value)
       else:
         return '({}).c_{}:{}:={}'.format(self.package, self.name, self.type, self.value)
     except:
       return safe_str(self)
+
+  @property
+  def is_constant(self):
+    return True
 
   @property
   def size_constant(self):

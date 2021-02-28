@@ -26,6 +26,10 @@ class Package(Element, HasProps):
       return safe_str(self)
 
   @property
+  def is_package(self):
+    return True
+
+  @property
   def has_role(self):
     return False
 

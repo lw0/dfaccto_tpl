@@ -7,7 +7,7 @@ from .element import EntityElement
 
 class InstPort(Typed, Instantiable, EntityElement):
   def __init__(self, port, inst_entity):
-    size_generic_inst = inst_entity.generics.lookup(port.size.name) if port.is_vector else False
+    size_generic_inst = inst_entity.generics.lookup(port.size_value.name) if port.is_vector else False
 
     EntityElement.__init__(self, inst_entity, port.name, 'p{mode}_{name}{dir}')
     Instantiable.__init__(self, port)
@@ -27,9 +27,9 @@ class InstPort(Typed, Instantiable, EntityElement):
     try:
       if self.is_vector:
         if self._connection is None:
-          return '({}).p_{}:{}({})'.format(self.entity, self.name, self.type, self.size)
+          return '({}).p_{}:{}({})'.format(self.entity, self.name, self.type, self.size_value)
         else:
-          return '({}).p_{}:{}({})=>{}'.format(self.entity, self.name, self.type, self.size, self._connection)
+          return '({}).p_{}:{}({})=>{}'.format(self.entity, self.name, self.type, self.size_value, self._connection)
       else:
         if self._connection is None:
           return '({}).p_{}:{}'.format(self.entity, self.name, self.type)
@@ -57,6 +57,10 @@ class InstPort(Typed, Instantiable, EntityElement):
         "Port {} connection expects a port, signal or list of those".format(self))
 
     self._connection = to
+
+  @property
+  def is_port(self):
+    return True
 
   @property
   def connection(self):
@@ -94,7 +98,7 @@ class Port(EntityElement, Typed, Connectable, Instantiable):
   def __str__(self):
     try:
       if self.is_vector:
-        return '({}).p_{}:{}({})'.format(self.entity, self.name, self.type, self.size)
+        return '({}).p_{}:{}({})'.format(self.entity, self.name, self.type, self.size_value)
       else:
         return '({}).p_{}:{}'.format(self.entity, self.name, self.type)
     except:
@@ -102,5 +106,9 @@ class Port(EntityElement, Typed, Connectable, Instantiable):
 
   def instantiate(self, inst_entity):
     return InstPort(self, inst_entity)
+
+  @property
+  def is_port(self):
+    return True
 
 

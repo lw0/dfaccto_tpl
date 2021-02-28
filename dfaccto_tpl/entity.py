@@ -5,6 +5,7 @@ from .generic import Generic
 from .common import Instantiable, HasProps
 from .element import Element
 
+
 class EntityCommon(HasProps):
   def __init__(self, props):
     HasProps.__init__(self, props)
@@ -15,6 +16,10 @@ class EntityCommon(HasProps):
     self._signals = Registry()
     self._connectables = Registry()
     self._identifiers = Registry()
+
+  @property
+  def is_entity(self):
+    return True
 
   @property
   def has_role(self):
@@ -62,6 +67,7 @@ class EntityCommon(HasProps):
 
   @property
   def used_packages(self):
+    # TODO-lw also consider constants used as values!
     packages = set()
     for conn in self._connectables.contents():
       packages.add(conn.type.package)

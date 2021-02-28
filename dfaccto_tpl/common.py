@@ -2,6 +2,7 @@ from collections import defaultdict
 import collections.abc as abc
 
 from .util import DFACCTOError, DFACCTOAssert, IndexedObj, ValueStore
+from .element import PackageElement, EntityElement
 
 
 
@@ -61,7 +62,7 @@ class Typed:
             pass #nothing to do, as both _size fields are already set
           elif self.is_vector and other.is_vector:
             if self.knows_size and other.knows_size:
-              DFACCTOAssert(self.size == other.size,
+              DFACCTOAssert(self.size_value == other.size_value,
                 'Can not adapt vector {} to vector {} of different size'.format(self, other))
             elif other.knows_size:
               other._set_size(self._size)
@@ -85,7 +86,7 @@ class Typed:
           DFACCTOAssert(self.is_vector,
             'Can not adapt scalar {} to partial'.format(self))
           if self.knows_size:
-            DFACCTOAssert(self.size == part_of,
+            DFACCTOAssert(self.size_value == part_of,
               'Can not adapt vector {} to partial of {} elements'.format(self, part_of))
           else:
             self._set_size(part_of)
@@ -112,7 +113,7 @@ class Typed:
             pass # _size already correctly set to False
           elif self.is_vector and other_is_sequence:
             if self.knows_size:
-              DFACCTOAssert(self.size == len(other),
+              DFACCTOAssert(self.size_value == len(other),
                 'Can not adapt vector {} to list "{}" of different length {}'.format(self, other, len(other)))
             else:
               self._set_size(len(other))
@@ -129,7 +130,7 @@ class Typed:
           DFACCTOAssert(self.is_vector,
             'Can not adapt scalar {} to partial'.format(self))
           if self.knows_size:
-            DFACCTOAssert(self.size == part_of,
+            DFACCTOAssert(self.size_value == part_of,
               'Can not adapt vector {} to partial of {} elements'.format(self, part_of))
           else:
             self._set_size(part_of)
@@ -184,12 +185,8 @@ class Typed:
     return self._type
 
   @property
-  def is_signal(self):
-    return self._type is not None and self._type.is_signal
-
-  @property
-  def is_port(self):
-    return self._type is not None and self._type.is_port
+  def is_directed(self):
+    return self._type is not None and self._type.is_directed
 
   @property
   def is_input(self):
@@ -266,6 +263,10 @@ class Typed:
 
   @property
   def size(self):
+    return self._size if isinstance(self._size, ValueContainer) else None
+
+  @property
+  def size_value(self):
     return self._size.value if isinstance(self._size, ValueContainer) else None
 
 
@@ -277,34 +278,32 @@ class ValueContainer(Typed, ValueStore):
       self.assign(value)
 
   @property
-  def value(self):
-    return self._get_value(self._idx) if self.is_simple else None
-
-  @property
-  def value_ms(self):
-    val = self._get_value(self._idx)
-    return val and val[0] if self.is_complex else None
-
-  @property
-  def value_sm(self):
-    val = self._get_value(self._idx)
-    return val and val[1] if self.is_complex else None
-
-  @property
   def has_value(self):
     return self._get_value(self._idx) is not None
+
+  @property
+  def is_reference(self):
+    val = self._get_value(self._idx)
+    return val is not None and isinstance(val, (EntityElement, PackageElement))
+
+  @property
+  def is_plain(self):
+    val = self._get_value(self._idx)
+    return val is not None and not isinstance(val, (EntityElement, PackageElement))
+
+  @property
+  def value(self):
+    # TODO-lw decode vector case with values-property (~> PortInst)
+    #   ?extend is_reference/plain here or move to Generic and Constant
+    #   (in that case, probably also to Port and Signal)
+    return self._get_value(self._idx)
 
   def assign(self, other):
     self.adapt(other)
     if isinstance(other, ValueContainer):
       self._assign(self._idx, other._idx)
     else:
-      if self.is_complex:
-        DFACCTOAssert(isinstance(other, abc.Mapping) and 'ms' in other and 'sm' in other,
-          'Complex {} must be assigned a mapping with "ms" and "sm" entries'.format(self))
-        self._set_value(self._idx, (other['ms'], other['sm']))
-      else: #self.is_simple
-        self._set_value(self._idx, other)
+      self._set_value(self._idx, other)
 
 
 class Connectable:

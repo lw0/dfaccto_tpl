@@ -36,6 +36,8 @@ class Type(PackageElement, HasProps):
       'Can not derive from already derived type {}'.format(self))
     DFACCTOAssert(self.role.is_compatible(role),
       'Can not derive incompatible role {} from type {}'.format(role, self))
+    DFACCTOAssert(role.is_directed,
+      'Can not derive undirected role {} from type {}'.format(role, self))
     if role in self._derivates:
       return self._derivates[role]
     derivate = copy(self)
@@ -50,6 +52,10 @@ class Type(PackageElement, HasProps):
     return self._role.is_compatible(other._role)
 
   @property
+  def is_type(self):
+    return True
+
+  @property
   def has_role(self):
     return True
 
@@ -62,18 +68,18 @@ class Type(PackageElement, HasProps):
     return self._role
 
   @property
+  def is_derived(self):
+    return self._derived_from is not None
+
+  @property
   def base(self):
     if self._derived_from is None:
       return self
     return self._derived_from
 
   @property
-  def is_signal(self):
-    return self._role.is_signal
-
-  @property
-  def is_port(self):
-    return self._role.is_port
+  def is_directed(self):
+    return self._role.is_directed
 
   @property
   def is_input(self):

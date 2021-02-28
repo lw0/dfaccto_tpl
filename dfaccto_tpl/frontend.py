@@ -120,7 +120,7 @@ class Decoder:
         generics.append((name, type_name, pkg_name, size_name))
       elif (res := cls.port_role_key(key)) is not None:
         name, role = res
-        DFACCTOAssert(role.is_port, 'Invalid port role "{}"'.format(role.name))
+        DFACCTOAssert(role.is_directed, 'Invalid port role "{}"'.format(role.name))
         type_name, pkg_name, size_name = cls.type_value(val)
         ports.append((name, role, type_name, pkg_name, size_name))
       elif (res := cls.prop_key(key)) is not None:
