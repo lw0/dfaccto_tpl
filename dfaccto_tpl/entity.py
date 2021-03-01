@@ -2,14 +2,12 @@ from .util import Registry, IndexWrapper, safe_str
 from .signal import Signal
 from .port import Port
 from .generic import Generic
-from .common import Instantiable, HasProps
+from .common import Instantiable
 from .element import Element
 
 
-class EntityCommon(HasProps):
-  def __init__(self, props):
-    HasProps.__init__(self, props)
-
+class EntityCommon:
+  def __init__(self):
     self._ports = Registry()
     self._generics = Registry()
     self._instances = Registry()
@@ -84,9 +82,9 @@ class InstEntity(EntityCommon, Instantiable, Element):
     new_props = entity.props.copy()
     new_props.update(props)
 
-    Element.__init__(self, entity.context, name, 'i_{name}')
+    Element.__init__(self, entity.context, name, 'i_{name}', new_props)
     Instantiable.__init__(self, entity)
-    EntityCommon.__init__(self, new_props)
+    EntityCommon.__init__(self)
     self._parent = parent
 
     for generic in entity.generics.contents():
@@ -115,14 +113,13 @@ class InstEntity(EntityCommon, Instantiable, Element):
 
 
 class Entity(EntityCommon, Instantiable, Element):
-  def __init__(self, context, name, **props):
-    Element.__init__(self, context, name, '{name}')
+  def __init__(self, context, name, props):
+    Element.__init__(self, context, name, '{name}', props)
     Instantiable.__init__(self)
-    EntityCommon.__init__(self, props)
+    EntityCommon.__init__(self)
 
     self.context.entities.register(self.name, self)
     self.context.identifiers.register(self.identifier, self)
-
 
   def __str__(self):
     try:

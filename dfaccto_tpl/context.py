@@ -1,26 +1,38 @@
-from .common import HasProps
 from .util import DFACCTOError, Registry, safe_str
 
 
-class Context(HasProps):
+class Context:
 
   def __init__(self):
-    HasProps.__init__(self)
+    self._props = dict()
     self._identifiers = Registry()
     self._packages = Registry()
     self._entities = Registry()
 
   def clear(self):
+    self._props.clear()
     self._identifiers.clear()
     self._packages.clear()
     self._entities.clear()
-    self.props.clear()
 
   def __str__(self):
     try:
       return '<global>'
     except:
       return safe_str(self)
+
+  def __getattr__(self, key):
+    if key.startswith('x_') and key[2:] in self._props:
+      return self._props[key[2:]]
+    else:
+      raise AttributeError(key)
+
+  # def extend_props(self, more_props):
+  #   pass
+
+  @property
+  def props(self):
+    return self._props
 
   @property
   def identifiers(self):

@@ -1,15 +1,13 @@
 from copy import copy
 from enum import Enum
 
-from .common import HasProps
 from .element import PackageElement
 from .util import DFACCTOAssert, safe_str
 
 
-class Type(PackageElement, HasProps):
+class Type(PackageElement):
   def __init__(self, package, name, role, props):
-    HasProps.__init__(self, props)
-    PackageElement.__init__(self, package, name, 't_{name}{vec}{dir}', has_vector=True)
+    PackageElement.__init__(self, package, name, 't_{name}{vec}{dir}', props, has_vector=True)
     self._role = role
     self.package.types.register(self.name, self)
     decl_name = self.package.declarations.unique_name(self.name) # Avoid collisions with constant names

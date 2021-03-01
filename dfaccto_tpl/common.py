@@ -1,7 +1,7 @@
 from collections import defaultdict
 import collections.abc as abc
 
-from .util import DFACCTOError, DFACCTOAssert, IndexedObj, ValueStore
+from .util import DFACCTOError, DFACCTOAssert, IndexedObj, ValueStore, IndexWrapper
 from .element import PackageElement, EntityElement
 
 
@@ -17,21 +17,6 @@ class Instantiable:
   @property
   def is_instance(self):
     return self._base is not None
-
-
-class HasProps:
-  def __init__(self, props=None):
-    self._props = props or dict()
-
-  @property
-  def props(self):
-    return self._props
-
-  def __getattr__(self, key):
-    if key.startswith('x_') and key[2:] in self._props:
-      return self._props[key[2:]]
-    else:
-      raise AttributeError(key)
 
 
 class Typed:
@@ -286,19 +271,28 @@ class ValueContainer(Typed, ValueStore):
     val = self._get_value(self._idx)
     return val is not None and isinstance(val, (EntityElement, PackageElement))
 
-  @property
-  def is_plain(self):
-    val = self._get_value(self._idx)
-    return val is not None and not isinstance(val, (EntityElement, PackageElement))
+  # @property
+  # def is_plain(self):
+  #   val = self._get_value(self._idx)
+  #   return val is not None and not isinstance(val, (EntityElement, PackageElement))
 
   @property
   def value(self):
-    # TODO-lw decode vector case with values-property (~> PortInst)
-    #   ?extend is_reference/plain here or move to Generic and Constant
-    #   (in that case, probably also to Port and Signal)
-    return self._get_value(self._idx)
+    val = self._get_value(self._idx)
+    if val is not None and not isinstance(val, abc.Sequence):
+      return val
+    return None
+
+  @property
+  def values(self):
+    val = self._get_value(self._idx)
+    if isinstance(val, abc.Sequence):
+      return IndexWrapper(val)
+    return None
 
   def assign(self, other):
+    # TODO-lw decode abc.Sequence and resulting multiple is_reference...
+    #  like Port.connect()
     self.adapt(other)
     if isinstance(other, ValueContainer):
       self._assign(self._idx, other._idx)

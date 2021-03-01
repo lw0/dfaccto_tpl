@@ -4,11 +4,11 @@ use ieee.numeric_std.all;
 
 {{#used_packages}}
 use work.{{identifier}};
-{{/used_types}}
+{{/used_packages}}
 
 
 entity {{identifier}} is
-{{#has_generics}}
+{{?generics}}
   generic (
 {{# generics}}
 {{#  is_complex}}
@@ -18,12 +18,10 @@ entity {{identifier}} is
     {{identifier}} : {{#is_scalar}}{{type.qualified}}{{|is_scalar}}{{type.qualified_v}} (0 to {{#size}}{{#is_reference}}{{value.qualified}}{{|is_reference}}{{*type.x_format}}{{/is_reference}}{{/size}}-1){{/is_scalar}}{{#_last}}){{/_last}};
 {{/  is_complex}}
 {{/ generics}}
-{{/has_generics}}
+{{/generics}}
   port (
     pi_clk : in std_logic;
-    pi_rst_n : in std_logic{{^has_ports}}){{/has_ports}};
-{{#has_ports}}
-
+    pi_rst_n : in std_logic{{^ports}}){{/ports}};
 {{#ports}}
 {{# is_complex}}
     {{identifier_ms}} : {{mode_ms}} {{#is_scalar}}{{type.qualified_ms}}{{|is_scalar}}{{type.qualified_v_ms}} (0 to {{#size}}{{#is_reference}}{{value.qualified}}{{|is_reference}}{{*type.x_format}}{{/is_reference}}{{/size}}-1){{/is_scalar}};
@@ -32,7 +30,6 @@ entity {{identifier}} is
     {{identifier}} : {{mode}} {{#is_scalar}}{{type.qualified}}{{|is_scalar}}{{type.qualified_v}} (0 to {{#size}}{{#is_reference}}{{value.qualified}}{{|is_reference}}{{*type.x_format}}{{/is_reference}}{{/size}}-1){{/is_scalar}}{{#_last}}){{/_last}};
 {{/ is_complex}}
 {{/ports}}
-{{/has_ports}}
 end {{identifier}};
 
 
@@ -51,25 +48,56 @@ begin
 
 {{#instances}}
   {{identifier}} : entity work.{{base.identifier}}
-{{# has_generics}}
+{{? generics}}
     generic map (
 {{#  generics}}
+      -- {{name}}:
 {{#   has_value}}
 {{#    is_complex}}
-      {{identifier_ms}} => {{#is_reference}}{{value.qualified_ms}}{{|is_reference}}{{*type.x_format_ms}}{{/is_reference}},
-      {{identifier_sm}} => {{#is_reference}}{{value.qualified_sm}}{{|is_reference}}{{*type.x_format_sm}}{{/is_reference}}{{#_last}}){{|_last}},{{/_last}}
+{{#     is_reference}}
+{{#      values}}
+      {{'identifier_ms}}({{_idx}}) => {{qualified_ms}},
+      {{'identifier_sm}}({{_idx}}) => {{qualified_sm}}{{#_last}}{{#'_last}}){{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
+{{/      values}}
+{{#      value}}
+      {{'identifier_ms}} => {{qualified_ms}},
+      {{'identifier_sm}} => {{qualified_sm}}{{#_last}}){{|_last}},{{/_last}}
+{{/      value}}
+{{|     is_reference}}
+{{#      values}}
+      {{identifier_ms}}({{_idx}}) => {{*type.x_format_ms}},
+      {{identifier_sm}}({{_idx}}) => {{*type.x_format_sm}}{{#_last}}{{#'_last}}){{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
+{{/      values}}
+{{#      value}}
+      {{identifier_ms}} => {{*type.x_format_ms}},
+      {{identifier_sm}} => {{*type.x_format_sm}}{{#_last}}){{|_last}},{{/_last}}
+{{/      value}}
+{{/     is_reference}}
 {{|    is_complex}}
-      {{identifier}} => {{#is_reference}}{{value.qualified}}{{|is_reference}}{{*type.x_format}}{{/is_reference}}{{#_last}}){{|_last}},{{/_last}}
+{{#     is_reference}}
+{{#      values}}
+      {{'identifier}}({{_idx}}) => {{qualified}}{{#_last}}{{#'_last}}){{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
+{{/      values}}
+{{#      value}}
+      {{'identifier}} => {{qualified}}{{#_last}}){{|_last}},{{/_last}}
+{{/      value}}
+{{|     is_reference}}
+{{#      values}}
+      {{identifier}}({{_idx}}) => {{*type.x_format}}{{#_last}}{{#'_last}}){{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
+{{/      values}}
+{{#      value}}
+      {{identifier}} => {{*type.x_format}}{{#_last}}){{|_last}},{{/_last}}
+{{/      value}}
+{{/     is_reference}}
 {{/    is_complex}}
-{{/   has_value}}
-{{^   has_value}}
+{{|   has_value}}
       {{identifier}} => open{{#_last}}){{|_last}},{{/_last}}
 {{/   has_value}}
 {{/  generics}}
-{{/ has_generics}}
+{{/ generics}}
     port map (
       pi_clk => pi_clk,
-      pi_rst_n => pi_rst_n,
+      pi_rst_n => pi_rst_n{{?ports}},{{|ports}});{{/ports}}
 {{# ports}}
 {{^  is_connected}}
       {{identifier}} => open{{#_last}});{{|_last}},{{/_last}}

@@ -44,6 +44,9 @@ class IndexedObj():
     else:
       raise AttributeError
 
+  def __str__(self):
+    return str(self._obj)
+
   @property
   def _last(self):
     return self._idx == (self._len - 1)
@@ -86,6 +89,10 @@ class Registry(abc.Iterable):
 
   def __len__(self):
     return len(self.map)
+
+  @property
+  def _empty(self):
+    return len(self.map) == 0
 
   def register(self, name, obj):
     DFACCTOAssert(name not in self.map, 'Name collision: "{}" is already defined'.format(name))

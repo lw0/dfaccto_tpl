@@ -234,7 +234,7 @@ class Frontend:
     name = Decoder.name_value(name)
     generics, ports, props = Decoder.read_entity(directives)
 
-    entity = Entity(self._context, name, **props)
+    entity = Entity(self._context, name, props)
 
     for name, type_name, pkg_name, size_name in generics:
       type = self._context.get_type(type_name, pkg_name)

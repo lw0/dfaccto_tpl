@@ -35,25 +35,74 @@ class SectionContainer:
       self._last_literals = False
 
 class SecKind(Enum):
-  Root = 0     # No section, but toplevel content
-  Normal = 1   # First part of regular section {{#...}}
-  Inverted = 2 # Inverted section {{^...}}
-  Both = 3     # Alternative part of regular section after {{|...}}
+  Root = auto()      # No section, but toplevel content
+  Normal = auto()    # First part of normal section {{#...}} (push=True, loop=True)
+  Enter = auto()     # First part of enter section {{=...}} (push=True, loop=False)
+  Check = auto()     # First part of check section {{?...}} (push=False, loop=True)
+  Exist = auto()    # First part of exists section {{!...}} (push=False, loop=False)
+  Inverted = auto()  # Inverted section {{^...}}
+  # Both = auto()      # Alternative part of non-inverted section after {{|...}}
+  AltNormal = auto() # Alternative part of normal section after {{|...}}
+  AltEnter = auto()  # Alternative part of enter section after {{|...}}
+  AltCheck = auto()  # Alternative part of check section after {{|...}}
+  AltExist = auto() # Alternative part of exists section after {{|...}}
+  End = auto()       # No section, but end of section marker {{/...}}
+  Alt = auto()       # No section, but alternative section marker {{|...}}
+
+  @property
+  def mode(self):
+    Modes = {
+      SecKind.Normal:    'Loop',
+      SecKind.Enter:     'Enter',
+      SecKind.Check:     'Check',
+      SecKind.Exist:     'Exist',
+      SecKind.Inverted:  'Loop',
+      SecKind.AltNormal: 'Loop',
+      SecKind.AltEnter:  'Enter',
+      SecKind.AltCheck:  'Check',
+      SecKind.AltExist:  'Exist'}
+    return Modes.get(self)
+
+  @property
+  def loop_flag(self):
+    return self in (SecKind.Normal, SecKind.Check, SecKind.AltNormal, SecKind.AltCheck)
+
+  @property
+  def can_alternate(self):
+    return self in (SecKind.Normal, SecKind.Enter, SecKind.Check, SecKind.Exist)
+
+  @property
+  def alternate(self):
+    Alternates = {
+      SecKind.Normal: SecKind.AltNormal,
+      SecKind.Enter:  SecKind.AltEnter,
+      SecKind.Check:  SecKind.AltCheck,
+      SecKind.Exist: SecKind.AltExist}
+    return Alternates.get(self)
+
+  @property
+  def active_content(self):
+    # True: truthy_content | False: falsey_content
+    return self in (SecKind.Root, SecKind.Normal, SecKind.Enter, SecKind.Check, SecKind.Exist)
+
+  def token_str(self, key):
+    TokenFormats = {
+      SecKind.Root:      '<root>',
+      SecKind.Normal:    '{{{{#{0}}}}}',
+      SecKind.Enter:     '{{{{={0}}}}}',
+      SecKind.Check:     '{{{{?{0}}}}}',
+      SecKind.Exist:    '{{{{!{0}}}}}',
+      SecKind.Inverted:  '{{{{^{0}}}}}',
+      SecKind.AltNormal: '{{{{#{0}}}}}{{{{|{0}}}}}',
+      SecKind.AltEnter:  '{{{{={0}}}}}{{{{|{0}}}}}',
+      SecKind.AltCheck:  '{{{{?{0}}}}}{{{{|{0}}}}}',
+      SecKind.AltExist: '{{{{!{0}}}}}{{{{|{0}}}}}',
+      SecKind.End:       '{{{{/{0}}}}}',
+      SecKind.Alt:       '{{{{|{0}}}}}'}
+    return TokenFormats[self].format(key)
+
 
 class SectionStack:
-
-  @staticmethod
-  def token_str(kind, key):
-    if kind is SecKind.Root:
-      return '<root>'
-    elif kind is SecKind.Normal:
-      return '{{{{#{}}}}}'.format(key)
-    elif kind is SecKind.Inverted:
-      return '{{{{^{}}}}}'.format(key)
-    elif kind is SecKind.Both:
-      return '{{{{|{}}}}}'.format(key)
-    else:
-      return '{{{{/{}}}}}'.format(key)
 
   def __init__(self):
     self._stack = deque()
@@ -78,7 +127,7 @@ class SectionStack:
 
   @property
   def content(self):
-    if self._stack[-1][0] in (SecKind.Root, SecKind.Normal):
+    if self._stack[-1][0].active_content:
       return self._stack[-1][2]
     else:
       return self._stack[-1][3]
@@ -86,39 +135,47 @@ class SectionStack:
   def push_normal(self, key):
     self._stack.append([SecKind.Normal, key, SectionContainer(), None])
 
+  def push_enter(self, key):
+    self._stack.append([SecKind.Enter, key, SectionContainer(), None])
+
+  def push_check(self, key):
+    self._stack.append([SecKind.Check, key, SectionContainer(), None])
+
+  def push_exists(self, key):
+    self._stack.append([SecKind.Exist, key, SectionContainer(), None])
+
   def push_inverted(self, key):
     self._stack.append([SecKind.Inverted, key, None, SectionContainer()])
 
   def alternate(self, key):
     if self.key != key:
       msg = 'Alternative token {} key mismatch with {}'
-      raise ParserError(msg.format(self.token_str(SecKind.Both, key),
-                                   self.token_str(self.kind, self.key)))
-    if self.kind is SecKind.Normal:
-      self.top[0] = SecKind.Both
+      raise ParserError(msg.format(SecKind.Alt.token_str(key),
+                                   self.kind.token_str(self.key)))
+    if self.kind.can_alternate:
+      self.top[0] = self.kind.alternate
       self.top[3] = SectionContainer()
     elif self.kind is SecKind.Root:
       msg = 'Alternative token {} outside section'
-      raise ParserError(msg.format(self.token_str(SecKind.Both, key)))
+      raise ParserError(msg.format(SecKind.Alt.token_str(key)))
     elif self.kind is SecKind.Inverted:
       msg = 'Alternative token {} can\'t be used with inverted sections'
-      raise ParserError(msg.format(self.token_str(SecKind.Both, key)))
-    elif self.kind is SecKind.Both:
+      raise ParserError(msg.format(SecKind.Alt.token_str(key)))
+    else:
       msg = 'Duplicate alternative token {}'
-      raise ParserError(msg.format(self.token_str(SecKind.Both, key)))
+      raise ParserError(msg.format(SecKind.Alt.token_str(key)))
 
   def pop(self, key):
     if self.key != key:
       msg = 'Closing token {} key mismatch with {}'
-      breakpoint()
-      raise ParserError(msg.format(self.token_str(None, key),
-                                   self.token_str(self.kind, self.key)))
+      raise ParserError(msg.format(SecKind.End.token_str(key),
+                                   self.kind.token_str(self.key)))
     if self.kind is not SecKind.Root:
       kind, key, truthy, falsey = self._stack.pop()
-      return (key, truthy and truthy.get(), falsey and falsey.get())
+      return (key, truthy and truthy.get(), falsey and falsey.get(), kind.mode)
     else:
       msg = 'Closing token {} without open section'
-      raise ParserError(msg.format(self.token_str(None, key)))
+      raise ParserError(msg.format(SecKind.End.token_str(key)))
 
   def take(self):
     if self.kind is SecKind.Root:
@@ -126,7 +183,7 @@ class SectionStack:
       return truthy.get()
     else:
       msg = 'Section token {} is never closed'
-      raise ParserError(msg.format(self.token_str(self.kind, self.key))) #TODO-lw: keep track of opening token pos
+      raise ParserError(msg.format(self.kind.token_str(self.key))) #TODO-lw: keep track of opening token pos
 
   def append_token(self, token):
     self.content.append_token(token)
@@ -193,9 +250,9 @@ class Parser:
     split_pat = r'(\r|\r?\n)|{start}((?:(?!{stop}).)*){stop}'.format(start=re.escape(start_delim),
                                                                      stop=re.escape(end_delim))
     self._split_pattern = re.compile(split_pat)
-    self._types = ('', '&', '*', '#', '|', '^', '/', '>')
-    self._key_types = ('', '&', '*', '#', '|', '^', '/')
-    self._standalone_types = ('#', '|', '^', '/')
+    self._types = ('', '&', '*', '#', '=', '?', '!', '|', '^', '/', '>')
+    self._key_types = ('', '&', '*', '#', '=', '?', '!', '|', '^', '/')
+    self._standalone_types = ('#', '=', '?', '!', '|', '^', '/')
     type_pat = r'[{chars}]{quant}'.format(chars=re.escape(''.join(self._types)),
                                           quant='?' if '' in self._types else '')
     self._token_pattern = re.compile(r'({type})\s*(\S+)\s*'.format(type=type_pat))
@@ -353,14 +410,20 @@ class Parser:
           elif kind == '>':
             sections.append_token(PartialToken(param, indent))
           elif kind == '#':
-            sections.push_normal(param) #TODO-lw do sections have indent?!
+            sections.push_normal(param)
+          elif kind == '=':
+            sections.push_enter(param)
+          elif kind == '?':
+            sections.push_check(param)
+          elif kind == '!':
+            sections.push_exists(param)
           elif kind == '^':
             sections.push_inverted(param)
           elif kind == '|':
             sections.alternate(param)
           elif kind == '/':
-            key, truthy, falsey = sections.pop(param)
-            token = SectionToken(key, truthy, falsey) #TODO-lw should use either indent=None or indent from opening token!
+            key, truthy, falsey, mode = sections.pop(param)
+            token = SectionToken(key, truthy, falsey, mode)
             sections.append_token(token)
         else:
           sections.append_literal(content)
@@ -375,7 +438,5 @@ class Parser:
     except ParserError as e:
       e.set_source(name)
       raise e
-
-  
 
 

@@ -12,6 +12,7 @@ Ent('Inner',
       po_done='simple.Logic')
 
 Ent('Barrier',
+    g_Dummy='Logic',
     g_PortCount='Size',
     g_MaskCount='Size',
     g_Mask='Integer(MaskCount)',
@@ -59,6 +60,7 @@ with Ent('Toplevel',
         p_done=To('doneLast'))
 
   Ins('Barrier',
+      g_Dummy=Val('LogicNull'),
       g_Mask=Val('Mask'),
         p_doneIn=ToVec('doneFirst', 'doneMid', 'doneLast'),
         p_done=To('done'))

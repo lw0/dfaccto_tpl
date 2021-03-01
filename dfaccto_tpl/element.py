@@ -1,7 +1,7 @@
 
 
 class Element:
-  def __init__(self, context, name, identifier_pattern, has_vector=False):
+  def __init__(self, context, name, identifier_pattern, props=None, has_vector=False):
     self._context = context
     self._name = name
     self._identifier_pattern = identifier_pattern
@@ -11,7 +11,18 @@ class Element:
     self._identifier_v = None
     self._identifier_v_ms = None
     self._identifier_v_sm = None
+    self._props = props or {}
     self._has_vector = has_vector
+
+  def __getattr__(self, key):
+    if key.startswith('x_') and key[2:] in self._props:
+      return self._props[key[2:]]
+    else:
+      raise AttributeError(key)
+
+  @property
+  def props(self):
+    return self._props
 
   @property
   def context(self):
@@ -87,8 +98,8 @@ class Element:
 
 
 class EntityElement(Element):
-  def __init__(self, entity, name, identifier_pattern, has_vector=False):
-    Element.__init__(self, entity.context, name, identifier_pattern, has_vector)
+  def __init__(self, entity, name, identifier_pattern, props=None, has_vector=False):
+    Element.__init__(self, entity.context, name, identifier_pattern, props, has_vector)
     self._entity = entity
 
   @property
@@ -121,8 +132,8 @@ class EntityElement(Element):
 
 
 class PackageElement(Element):
-  def __init__(self, package, name, identifier_pattern, has_vector=False):
-    Element.__init__(self, package.context, name, identifier_pattern, has_vector)
+  def __init__(self, package, name, identifier_pattern, props=None, has_vector=False):
+    Element.__init__(self, package.context, name, identifier_pattern, props, has_vector)
     self._package = package
     self._qualified = None
     self._qualified_ms = None

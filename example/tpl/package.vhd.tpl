@@ -14,7 +14,7 @@ package {{identifier}} is
   constant {{identifier_ms}} : {{type.qualified_ms}} := {{#is_reference}}{{value.qualified_ms}}{{|is_reference}}{{*type.x_format_ms}}{{/is_reference}};
   constant {{identifier_sm}} : {{type.qualified_sm}} := {{#is_reference}}{{value.qualified_sm}}{{|is_reference}}{{*type.x_format_sm}}{{/is_reference}};
 {{|  is_complex}}
-  constant {{identifier}} : {{type.qualified}} := {{#is_reference}}{{value.qualified}}{{|is_reference}}{{*type.x_format}}{{/is_reference}};
+  constant {{identifier}} : {{type.qualified}} := {{#is_reference}}{{value.qualified}}{{|is_reference}}{{=value}}{{*type.x_format}}{{/value}}{{/is_reference}};
 {{/  is_complex}}
 {{/ is_constant}}
 

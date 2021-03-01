@@ -98,6 +98,6 @@ class Key:
     return '{}{}'.format(mode_str, path_str)
 
   def __eq__(self, other):
-    return self._mode == other._mode and self._path and other._path
+    return self._mode == other._mode and self._path == other._path
 
 

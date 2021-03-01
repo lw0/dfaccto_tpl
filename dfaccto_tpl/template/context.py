@@ -40,44 +40,67 @@ class Context:
     return self._stack.pop()
 
   def get_string(self, key, verbatim):
-    val = self._get_value(key)
-    if not isinstance(val, str):
-      val = self._stringify(val)
-    if verbatim or self._escape is None:
-      return val
-    else:
-      return self._escape(val)
+    try:
+      val = self._get_value(key)
+      if not isinstance(val, str):
+        val = self._stringify(val)
+      if verbatim or self._escape is None:
+        return val
+      else:
+        return self._escape(val)
+    except AbsentError as e:
+      if self._raise_on_absent:
+        e.set_key(key)
+        raise e
+      else:
+        return ''
 
-  def get_section(self, key):
-    val = self._get_value(key)
-    if val is None or val is False:
-      # exclude integer 0 from falsey values!
-      return []
-    elif isinstance(val, str):
-      return [val]
-    else:
-      try:
-        iter(val)
-      except TypeError:
+  def get_iterable(self, key):
+    try:
+      val = self._get_value(key)
+      if not val:
+        return []
+      elif isinstance(val, str):
         return [val]
       else:
-        return val
-
-  def _get_value(self, key):
-    try:
-      if not key.first:
-        return self._top(key.skip)
+        try:
+          iter(val)
+        except TypeError:
+          return [val]
+        else:
+          return val
+    except AbsentError as e:
+      if self._raise_on_absent:
+        e.set_key(key)
+        raise e
       else:
-        value = self._search(key.first, key.skip, key.anchored)
-        for part in key.rest:
-          value = self._lookup(value, part)
-        return value
+        return []
+
+  def has_value(self, key):
+    try:
+      self._get_value(key)
+      return True
+    except AbsentError as e:
+      return False
+
+  def get_value(self, key):
+    try:
+      return self._get_value(key)
     except AbsentError as e:
       if self._raise_on_absent:
         e.set_key(key)
         raise e
       else:
         return None
+
+  def _get_value(self, key):
+    if not key.first:
+      return self._top(key.skip)
+    else:
+      value = self._search(key.first, key.skip, key.anchored)
+      for part in key.rest:
+        value = self._lookup(value, part)
+      return value
 
   def _top(self, skip):
     if len(self._stack) <= skip:

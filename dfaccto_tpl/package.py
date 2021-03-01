@@ -1,15 +1,13 @@
 from .util import Registry, safe_str
-from .common import HasProps
 from .element import Element
 from .type import Type
 from .constant import Constant
 
 
-class Package(Element, HasProps):
+class Package(Element):
 
   def __init__(self, context, name, props):
-    Element.__init__(self, context, name, '{name}')
-    HasProps.__init__(self, props)
+    Element.__init__(self, context, name, '{name}', props)
 
     self._types = Registry()
     self._constants = Registry()
