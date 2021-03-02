@@ -3,7 +3,7 @@ from .signal import Signal
 from .port import Port
 from .generic import Generic
 from .common import Instantiable
-from .element import Element
+from .element import Element, PackageElement
 
 
 
@@ -53,14 +53,6 @@ class Instance(Instantiable, Element):
   @property
   def identifiers(self):
     return self._identifiers
-
-  @property
-  def used_packages(self):
-    # TODO-lw also consider constants used as values!
-    packages = set()
-    for conn in self._connectables.contents():
-      packages.add(conn.type.package)
-    return IndexWrapper(packages)
 
   def assign(self, generic_name, value):
     self.generics.lookup(generic_name).value_equals(value)
@@ -119,10 +111,34 @@ class Entity(Instantiable, Element):
 
   @property
   def used_packages(self):
-    # TODO-lw also consider constants used as values!
     packages = set()
     for conn in self._connectables.contents():
       packages.add(conn.type.package)
+    for prop in self.props.values():
+      if isinstance(prop, PackageElement):
+        packages.add(prop.package)
+    for inst in self._instances.contents():
+      # TODO-lw: require inst.props?
+      for generic in inst.generics.contents():
+        packages.add(generic.type.package)
+        if isinstance(generic.size, PackageElement):
+          packages.add(generic.size.package)
+        if isinstance(generic.value, PackageElement):
+          packages.add(generic.value.package)
+        if generic.values:
+          for part in generic.values:
+            if isinstance(part, PackageElement):
+              packages.add(part.package)
+      for port in inst.ports.contents():
+        packages.add(port.type.package)
+        if isinstance(port.size, PackageElement):
+          packages.add(port.size.package)
+        if isinstance(port.connection, PackageElement):
+          packages.add(port.connection.package)
+        if port.connections:
+          for part in port.connections:
+            if isinstance(part, PackageElement):
+              packages.add(part.package)
     return IndexWrapper(packages)
 
   def get_generic(self, name):
