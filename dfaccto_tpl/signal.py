@@ -4,9 +4,9 @@ from .element import EntityElement
 
 
 class Signal(EntityElement, Typed, Connectable):
-  def __init__(self, entity, name, type=None, size=None):
+  def __init__(self, entity, name, type=None, vector=None, size=None):
     EntityElement.__init__(self, entity, name, 's_{name}{dir}')
-    Typed.__init__(self, type, size, on_type_set=self._register_identifiers)
+    Typed.__init__(self, type, vector, size, on_type_set=self._register_identifiers)
     Connectable.__init__(self)
 
     self.entity.signals.register(self.name, self)
@@ -25,14 +25,14 @@ class Signal(EntityElement, Typed, Connectable):
         type_str = ':{}'.format(self.type)
       else:
         type_str = '?'
-      if self.knows_cardinality:
+      if self.knows_vector:
         if self.is_vector:
-          size_str = '({})'.format(self.size_value if self.knows_size else '')
+          vec_str = '({})'.format(self.size if self.knows_size else '')
         else:
-          size_str = ''
+          vec_str = ''
       else:
-        size_str = '?'
-      return '({}).s_{}{}{}'.format(self.entity, self.name, type_str, size_str)
+        vec_str = '?'
+      return '({}).s_{}{}{}'.format(self.entity, self.name, type_str, vec_str)
     except:
       return safe_str(self)
 

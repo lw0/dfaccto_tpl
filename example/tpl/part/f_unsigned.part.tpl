@@ -1,1 +1,1 @@
-to_unsigned({{.}}, {{type.qualified}}'length)
+to_unsigned({{value}}, {{type.qualified}}'length)

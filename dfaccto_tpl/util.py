@@ -5,6 +5,7 @@ import collections.abc as abc
 
 class DFACCTOError(Exception):
   def __init__(self, msg):
+    breakpoint()
     self.msg = msg
 
 
@@ -90,9 +91,8 @@ class Registry(abc.Iterable):
   def __len__(self):
     return len(self.map)
 
-  @property
-  def _empty(self):
-    return len(self.map) == 0
+  # TODO-lw add __getattr__ for indices *and* names
+  #   perhaps replace OrderedDict with [obj] and {name: idx(obj)}
 
   def register(self, name, obj):
     DFACCTOAssert(name not in self.map, 'Name collision: "{}" is already defined'.format(name))
@@ -138,6 +138,10 @@ class UnionFind:
 
   def find(self, idx):
     return self._root[idx]
+
+  def group(self, idx):
+    root = self.find(idx)
+    return self._groups[root]
 
   def union(self, idx_a, idx_b):
     root_a = self.find(idx_a)
@@ -199,5 +203,36 @@ class ValueStore:
       cls._registry.union(idx_b, idx_a)
     else:
       cls._registry.union(idx_a, idx_b)
+
+class DeferredValue:
+  _registry = UnionFind()
+  _callbacks = dict()
+
+  @classmethod
+  def _create(cls, callback):
+    idx = cls._registry.new()
+    cls._callbacks[idx] = callback
+    return idx
+
+  @classmethod
+  def _assign(cls, idx_a, idx_b):
+    cls._registry.union(idx_a, idx_b)
+
+  @classmethod
+  def _resolve(cls, idx, value):
+    #TODO-lw track if already resolved
+    for i in cls._registry.group(idx):
+      callback = cls._callbacks.get(i)
+      if callback:
+        callback(value)
+
+  def __init__(self, on_resolve):
+    self._idx = self._create(on_resolve)
+
+  def assign(self, other):
+    if isinstance(other, DeferredValue):
+      self._assign(self._idx, other._idx)
+    else:
+      self._resolve(self._idx, other)
 
 

@@ -1,12 +1,13 @@
-from .common import ValueContainer, Connectable
+from .common import ValueContainer, Connectable, Assignable
 from .element import PackageElement
 from .util import DFACCTOAssert, safe_str
 from .role import Role
 
 
-class Constant(PackageElement, ValueContainer, Connectable):
-  def __init__(self, package, name, type, size_constant_name=None, value=None, *, props):
-    self._size_constant = size_constant_name and package.constants.lookup(size_constant_name)
+class Constant(PackageElement, ValueContainer, Connectable, Assignable):
+  def __init__(self, package, name, type, size_constant, value=None, *, props):
+    if size_constant is not None:
+      size_constant.vector_equals(False)
 
     if type.is_complex:
       if not type.is_directed:
@@ -20,8 +21,9 @@ class Constant(PackageElement, ValueContainer, Connectable):
         raise DFACCTOError('Simple constants must have input role')
 
     PackageElement.__init__(self, package, name, 'c_{name}{dir}', props)
-    ValueContainer.__init__(self, type, self._size_constant or False, value)
+    ValueContainer.__init__(self, type, size_constant is not None, size_constant and size_constant.raw_value, value)
     Connectable.__init__(self)
+    self._size_constant = size_constant
 
     self.package.constants.register(self.name, self)
     decl_name = self.package.declarations.unique_name(self.name) # Avoid collisions with type names
@@ -35,7 +37,7 @@ class Constant(PackageElement, ValueContainer, Connectable):
   def __str__(self):
     try:
       if self.is_vector:
-        return '({}).c_{}:{}({}):={}'.format(self.package, self.name, self.type, self.size_value, self.value)
+        return '({}).c_{}:{}({}):={}'.format(self.package, self.name, self.type, self.size_constant, self.value)
       else:
         return '({}).c_{}:{}:={}'.format(self.package, self.name, self.type, self.value)
     except:

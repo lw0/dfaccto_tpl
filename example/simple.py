@@ -33,7 +33,7 @@ with Ent('Toplevel',
          x_templates={'entity.vhd': 'Toplevel.vhd'}):
 
   Ins('Inner', name='mid',
-      g_Pattern=(1,2,5),
+      g_Pattern=LitVec(1,2,5),
         p_hsIn=To('hsIntFirst'),
         p_hsOut=To('hsIntMid'),
         p_dataIn=To('dataIntFirst'),
@@ -42,7 +42,7 @@ with Ent('Toplevel',
         p_done=To('doneMid'))
 
   Ins('Inner', name='first',
-      g_Pattern=(2,3),
+      g_Pattern=LitVec(2,3),
         p_hsIn=To('hsIn'),
         p_hsOut=To('hsIntFirst'),
         p_dataIn=To('dataIn'),
@@ -51,7 +51,7 @@ with Ent('Toplevel',
         p_done=To('doneFirst'))
 
   Ins('Inner', name='last',
-      g_Pattern=(1,2,4,8),
+      g_Pattern=LitVec(1,2,4,8),
         p_hsIn=To('hsIntMid'),
         p_hsOut=To('hsOut'),
         p_dataIn=To('dataIntMid'),

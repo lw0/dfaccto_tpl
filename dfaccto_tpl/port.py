@@ -7,12 +7,12 @@ from .element import EntityElement
 
 class InstPort(Typed, Instantiable, EntityElement):
   def __init__(self, port, inst_entity):
-    size_generic_inst = inst_entity.generics.lookup(port.size_value.name) if port.is_vector else False
+    size = inst_entity.generics.lookup(port.size.name) if port.is_vector else None
 
     EntityElement.__init__(self, inst_entity, port.name, 'p{mode}_{name}{dir}')
     Instantiable.__init__(self, port)
-    # InstGeneric is ValueContainer and will propagate
-    Typed.__init__(self, port.type, size_generic_inst)
+    # size.raw_value may be DeferredValue and will propagate if necessary
+    Typed.__init__(self, port.type, size is not None, size and size.raw_value)
 
     self._connection = None
 
@@ -27,9 +27,9 @@ class InstPort(Typed, Instantiable, EntityElement):
     try:
       if self.is_vector:
         if self._connection is None:
-          return '({}).p_{}:{}({})'.format(self.entity, self.name, self.type, self.size_value)
+          return '({}).p_{}:{}({})'.format(self.entity, self.name, self.type, self.size)
         else:
-          return '({}).p_{}:{}({})=>{}'.format(self.entity, self.name, self.type, self.size_value, self._connection)
+          return '({}).p_{}:{}({})=>{}'.format(self.entity, self.name, self.type, self.size, self._connection)
       else:
         if self._connection is None:
           return '({}).p_{}:{}'.format(self.entity, self.name, self.type)
@@ -47,14 +47,14 @@ class InstPort(Typed, Instantiable, EntityElement):
       to.connect_port(self)
     elif isinstance(to, abc.Sequence):
       DFACCTOAssert(all(isinstance(part, Connectable) for part in to),
-        "Vector port {} connection list expects ports or signals".format(self))
+        'List connection to port {} must only contain connectable elements'.format(self))
       vec = len(to)
       for idx, part in enumerate(to):
         self.adapt(part, part_of=vec)
         part.connect_port(self, idx)
     else:
       raise DFACCTOError(
-        "Port {} connection expects a port, signal or list of those".format(self))
+        'Connection to port {} must be a connectable element or list of such'.format(self))
 
     self._connection = to
 
@@ -81,9 +81,11 @@ class InstPort(Typed, Instantiable, EntityElement):
 
 class Port(EntityElement, Typed, Connectable, Instantiable):
   def __init__(self, entity, name, type, size_generic):
+    if size_generic is not None:
+      size_generic.vector_equals(False)
+
     EntityElement.__init__(self, entity, name, 'p{mode}_{name}{dir}')
-    # Generic or False are not ValueContainers, size will be determined here
-    Typed.__init__(self, type, size_generic or False)
+    Typed.__init__(self, type, size_generic is not None, size_generic)
     Connectable.__init__(self)
     Instantiable.__init__(self)
 
@@ -98,7 +100,7 @@ class Port(EntityElement, Typed, Connectable, Instantiable):
   def __str__(self):
     try:
       if self.is_vector:
-        return '({}).p_{}:{}({})'.format(self.entity, self.name, self.type, self.size_value)
+        return '({}).p_{}:{}({})'.format(self.entity, self.name, self.type, self.size)
       else:
         return '({}).p_{}:{}'.format(self.entity, self.name, self.type)
     except:

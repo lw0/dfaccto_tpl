@@ -1,17 +1,17 @@
 import collections.abc as abc
 
 from .util import DFACCTOAssert, safe_str
-from .common import Instantiable, Typed, ValueContainer, Connectable
+from .common import Instantiable, Typed, ValueContainer, Connectable, Assignable
 from .element import EntityElement
 from .role import Role
 
 
 class InstGeneric(ValueContainer, Instantiable, EntityElement):
   def __init__(self, generic, inst_entity):
-    size_generic_inst = inst_entity.generics.lookup(generic.size_value.name) if generic.is_vector else False
+    size = inst_entity.generics.lookup(generic.size.name) if generic.is_vector else None
 
-    # InstGeneric is ValueContainer and will propagate
-    ValueContainer.__init__(self, generic.type, size_generic_inst)
+    # size_generic_inst.raw_value may be DeferredValue and will propagate if necessary
+    ValueContainer.__init__(self, generic.type, size is not None, size and size.raw_value)
     Instantiable.__init__(self, generic)
     EntityElement.__init__(self, inst_entity, generic.name, 'g_{name}{dir}')
 
@@ -26,9 +26,9 @@ class InstGeneric(ValueContainer, Instantiable, EntityElement):
     try:
       if self.is_vector:
         if self.has_value:
-          return '({}).g_{}:{}({})={}'.format(self.entity, self.name, self.type, self.size_value, self.value)
+          return '({}).g_{}:{}({})={}'.format(self.entity, self.name, self.type, self.size, self.value)
         else:
-          return '({}).g_{}:{}({})'.format(self.entity, self.name, self.type, self.size_value)
+          return '({}).g_{}:{}({})'.format(self.entity, self.name, self.type, self.size)
       else:
         if self.has_value:
           return '({}).g_{}:{}={}'.format(self.entity, self.name, self.type, self.value)
@@ -42,8 +42,11 @@ class InstGeneric(ValueContainer, Instantiable, EntityElement):
     return True
 
 
-class Generic(EntityElement, Typed, Connectable, Instantiable):
+class Generic(EntityElement, Typed, Connectable, Instantiable, Assignable):
   def __init__(self, entity, name, type, size_generic):
+    if size_generic is not None:
+      size_generic.vector_equals(False)
+
     if type.is_complex:
       if not type.is_directed:
         type = type.derive(Role.View)
@@ -57,12 +60,9 @@ class Generic(EntityElement, Typed, Connectable, Instantiable):
 
     EntityElement.__init__(self, entity, name, 'g_{name}{dir}')
     # Generic or False are not ValueContainers, size will be determined here
-    Typed.__init__(self, type, size_generic or False)
+    Typed.__init__(self, type, size_generic is not None, size_generic)
     Connectable.__init__(self)
     Instantiable.__init__(self)
-
-    DFACCTOAssert(size_generic is None or size_generic.is_scalar,
-      'Size generic {} for vector generic {} can not itself be a vector'.format(self.size_value, self))
 
     self.entity.generics.register(self.name, self)
     if self.is_simple:
@@ -74,7 +74,7 @@ class Generic(EntityElement, Typed, Connectable, Instantiable):
   def __str__(self):
     try:
       if self.is_vector:
-        return '({}).g_{}:{}({})'.format(self.entity, self.name, self.type, self.size_value)
+        return '({}).g_{}:{}({})'.format(self.entity, self.name, self.type, self.size)
       else:
         return '({}).g_{}:{}'.format(self.entity, self.name, self.type)
     except:

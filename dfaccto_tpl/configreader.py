@@ -14,6 +14,8 @@ class ConfigReader:
     self._globals = {
       'Inc':    self.read,
       'Seq':    Seq,
+      'Lit':    self._frontend.literal_reference,
+      'LitVec': self._frontend.literal_vector_reference,
       'Gbl':    self._frontend.global_statement,
       'Val':    self._frontend.assignable_reference,
       'ValVec': self._frontend.assignable_vector_reference,

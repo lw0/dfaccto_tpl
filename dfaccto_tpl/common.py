@@ -1,7 +1,7 @@
 from collections import defaultdict
 import collections.abc as abc
 
-from .util import DFACCTOError, DFACCTOAssert, IndexedObj, ValueStore, IndexWrapper
+from .util import DFACCTOError, DFACCTOAssert, IndexedObj, ValueStore, IndexWrapper, DeferredValue
 from .element import PackageElement, EntityElement
 
 
@@ -20,133 +20,84 @@ class Instantiable:
 
 
 class Typed:
-  def __init__(self, type=None, size=None, *, on_type_set=None):
-    # size may be None (unknown if vector), False (scalar), ValueContainer (vector), others wrapped in ValueContainer
-    self._type = type
+  def __init__(self, type=None, vector=None, size=None, on_type_set=None):
     self._on_type_set = on_type_set
-    self._type = None
-    self._set_type(type)
-    self._size = None
-    self._set_size(size)
+    self._type = DeferredValue(self._resolve_type)
+    self._vector = DeferredValue(self._resolve_vector)
+    self._size = DeferredValue(self._resolve_size)
+    self.type_equals(type)
+    self.vector_equals(vector)
+    self.size_equals(size)
 
   def adapt(self, other, part_of=None):
-    # concerns: check type and multiplicity compatibility
     if isinstance(other, Typed):
-      if self._type is None:
-        # only signals may have unset types, so use a signal type here
-        self._set_type(other._type.base)
-      elif other._type is None:
-        # only signals may have unset types, so use a signal type here
-        other._set_type(self._type.base)
-      elif not self._type.base.is_compatible(other._type):
-        raise DFACCTOError("Type of {} is incompatible with {}".format(self, other))
+      # TODO-lw separate role adaption masks to simplify and generalize this
+      #  temp-solution: only signals may have unknown type here,
+      #  so force base type to ensure proper signal role
+      if self.knows_type:
+        other.type_equals(self.type.base)
+      elif other.knows_type:
+        self.type_equals(other.type.base)
+      else:
+        self.type_equals(other._type)
+      # self.type_equals(other._type)
 
       if part_of is None:
-        if self.knows_cardinality and other.knows_cardinality:
-          if self.is_scalar and other.is_scalar:
-            pass #nothing to do, as both _size fields are already set
-          elif self.is_vector and other.is_vector:
-            if self.knows_size and other.knows_size:
-              DFACCTOAssert(self.size_value == other.size_value,
-                'Can not adapt vector {} to vector {} of different size'.format(self, other))
-            elif other.knows_size:
-              other._set_size(self._size)
-            else: # only other knows size or both do not know
-              self._set_size(other._size)
-          elif self.is_vector:
-            raise DFACCTOError(
-              'Can not adapt vector {} to scalar {}'.format(self, other))
-          else: # self.is_scalar
-            raise DFACCTOError(
-              'Can not adapt scalar {} to vector {}'.format(self, other))
-        elif self.knows_cardinality:
-          other._set_size(self._size)
-        elif other.knows_cardinality:
-          self._set_size(other._size)
-        # impossible that neither knows cardinality,
-        # as only signals can be in this state
-        # and they can not be connected together
+        self.vector_equals(other._vector)
+        self.size_equals(other._size)
       else:
-        if self.knows_cardinality:
-          DFACCTOAssert(self.is_vector,
-            'Can not adapt scalar {} to partial'.format(self))
-          if self.knows_size:
-            DFACCTOAssert(self.size_value == part_of,
-              'Can not adapt vector {} to partial of {} elements'.format(self, part_of))
-          else:
-            self._set_size(part_of)
-        else:
-          self._set_size(part_of)
-        if other.knows_cardinality:
-          DFACCTOAssert(other.is_scalar,
-            'Can not adapt vector {} as partial, which must be scalar.'.format(other))
-        else:
-          other._set_size(False)
+        self.vector_equals(True)
+        self.size_equals(LiteralValue(part_of))
+        other.vector_equals(False)
     else:
-      # Only ValueContainers may adapt to plain values and ValueContainers have explicit types
-      # thus self.has_type should be True here
-      DFACCTOAssert(self.knows_type,
-        'Untyped {} can not adapt to plain value "{}"'.format(self, other))
-
-      # plain values are considered untyped scalars
-      #  unless part_of specifies an untyped vector
-      # do not touch _type
       if part_of is None:
-        other_is_sequence = isinstance(other, abc.Sequence) and not isinstance(other, str)
-        if self.knows_cardinality:
-          if self.is_scalar and not other_is_sequence:
-            pass # _size already correctly set to False
-          elif self.is_vector and other_is_sequence:
-            if self.knows_size:
-              DFACCTOAssert(self.size_value == len(other),
-                'Can not adapt vector {} to list "{}" of different length {}'.format(self, other, len(other)))
-            else:
-              self._set_size(len(other))
-          elif self.is_vector:
-            raise DFACCTOError(
-              'Can not adapt vector {} to non-list "{}"'.format(self, other))
-          else: # self.is_vector
-            raise DFACCTOError(
-              'Can not adapt scalar {} to list "{}"'.format(self, other))
-        else:
-          self._set_size(other_is_sequence and len(other))
+        self.vector_equals(False)
       else:
-        if self.knows_cardinality:
-          DFACCTOAssert(self.is_vector,
-            'Can not adapt scalar {} to partial'.format(self))
-          if self.knows_size:
-            DFACCTOAssert(self.size_value == part_of,
-              'Can not adapt vector {} to partial of {} elements'.format(self, part_of))
-          else:
-            self._set_size(part_of)
-        else:
-          self._set_size(part_of)
+        self.vector_equals(True)
+        self.size_equals(LiteralValue(part_of))
 
-  def _set_type(self, type):
+  def type_equals(self, type):
+    if type is None:
+      return
+    if isinstance(self._type, DeferredValue):
+      self._type.assign(type)
+    elif isinstance(type, DeferredValue):
+      type.assign(self._type)
+    elif not self._type.base.is_compatible(type):
+      raise DFACCTOError("Type of {} is already set and can not be changed to {}".format(self, type))
+
+  def _resolve_type(self, type):
     self._type = type
-    if self._type is not None and self._on_type_set is not None:
+    if self._on_type_set is not None:
       self._on_type_set()
 
-  def _set_size(self, size):
-    if self._size is None:
-      if size is None:
-        pass # unknown size has no effect
-      elif size is False:
-        self._size = False
-      elif isinstance(size, ValueContainer):
-        DFACCTOAssert(size.is_scalar,
-          'Can not use vector {} as size for vector {}'.format(size, self))
-        self._size = size
-      else:
-        # TODO-lw: _size must have a simple type, but type=None here
-        #  also allows complex types!
-        self._size = ValueContainer(type=None, size=False, value=size)
-    elif isinstance(self._size, ValueContainer):
-      self._size.assign(size)
-    else: # self._size is False
-      DFACCTOAssert(size is None or size is False,
-        'Can not set size of scalar {} to {}'.format(self, size))
+  def vector_equals(self, vector):
+    if vector is None:
+      return
+    if isinstance(self._vector, DeferredValue):
+      self._vector.assign(vector)
+    elif isinstance(vector, DeferredValue):
+      vector.assign(self._vector)
+    elif self._vector != vector:
+      self_str = 'Vector' if self._vector else 'Scalar'
+      other_str = 'vector' if vector else 'scalar'
+      raise DFACCTOError("{} is already a {} and can not be changed to a {}".format(self, self_str, other_str))
 
+  def _resolve_vector(self, vector):
+    self._vector = vector
+
+  def size_equals(self, size):
+    if size is None:
+      return
+    if isinstance(self._size, DeferredValue):
+      self._size.assign(size)
+    elif isinstance(size, DeferredValue):
+      size.assign(self._size)
+    elif self._size != size:
+      raise DFACCTOError("Size of {} is already set and can not be changed to {}".format(self, size))
+
+  def _resolve_size(self, size):
+    self._size = size
 
   @property
   def has_role(self):
@@ -231,73 +182,25 @@ class Typed:
 
 
   @property
-  def knows_cardinality(self):
-    return self._size is not None
+  def knows_vector(self):
+    return not isinstance(self._vector, DeferredValue)
 
   @property
   def is_scalar(self):
-    return self._size is False
+    return self._vector is False
 
   @property
   def is_vector(self):
-    return isinstance(self._size, ValueContainer)
+    return self._vector is True
+
 
   @property
   def knows_size(self):
-    return isinstance(self._size, ValueContainer) and self._size.value is not None
+    return not isinstance(self._size, DeferredValue)
 
   @property
   def size(self):
-    return self._size if isinstance(self._size, ValueContainer) else None
-
-  @property
-  def size_value(self):
-    return self._size.value if isinstance(self._size, ValueContainer) else None
-
-
-class ValueContainer(Typed, ValueStore):
-  def __init__(self, type, size, value=None):
-    self._idx = self._create()
-    Typed.__init__(self, type, size)
-    if value is not None:
-      self.assign(value)
-
-  @property
-  def has_value(self):
-    return self._get_value(self._idx) is not None
-
-  @property
-  def is_reference(self):
-    val = self._get_value(self._idx)
-    return val is not None and isinstance(val, (EntityElement, PackageElement))
-
-  # @property
-  # def is_plain(self):
-  #   val = self._get_value(self._idx)
-  #   return val is not None and not isinstance(val, (EntityElement, PackageElement))
-
-  @property
-  def value(self):
-    val = self._get_value(self._idx)
-    if val is not None and not isinstance(val, abc.Sequence):
-      return val
-    return None
-
-  @property
-  def values(self):
-    val = self._get_value(self._idx)
-    if isinstance(val, abc.Sequence):
-      return IndexWrapper(val)
-    return None
-
-  def assign(self, other):
-    # TODO-lw decode abc.Sequence and resulting multiple is_reference...
-    #  like Port.connect()
-    self.adapt(other)
-    if isinstance(other, ValueContainer):
-      self._assign(self._idx, other._idx)
-    else:
-      self._set_value(self._idx, other)
+    return self._size
 
 
 class Connectable:
@@ -316,4 +219,82 @@ class Connectable:
   # @property
   # def connections(self):
   #   return self._connections
+
+
+class Assignable:
+  pass
+
+
+class LiteralValue(Typed, Assignable):
+  def __init__(self, value):
+    Typed.__init__(self)
+    self._value = value
+
+  def __str__(self):
+    return str(self._value)
+
+  def __eq__(self, other):
+    if isinstance(other, LiteralValue):
+      return self._value == other._value
+    return False
+
+  @property
+  def value(self):
+    return self._value
+
+  @property
+  def is_literal(self):
+    return True
+
+
+class ValueContainer(Typed):
+  def __init__(self, type, vector, size, value=None):
+    Typed.__init__(self, type, vector, size)
+    self._value = DeferredValue(self._resolve_value)
+    self.value_equals(value)
+
+  @property
+  def knows_value(self):
+    return not isinstance(self._value, DeferredValue)
+
+  @property
+  def raw_value(self):
+    return self._value
+
+  @property
+  def value(self):
+    if not isinstance(self._value, (DeferredValue, abc.Sequence)):
+      return self._value
+    return None
+
+  @property
+  def values(self):
+    if isinstance(self._value, abc.Sequence):
+      return IndexWrapper(self._value)
+    return None
+
+  def value_equals(self, value):
+    if value is None:
+      return
+    if isinstance(self._value, DeferredValue):
+      self._value.assign(value)
+    elif isinstance(value, DeferredValue):
+      value.assign(self._value)
+    elif self._value != value:
+      raise DFACCTOError('Value of {} is already set and can not be changed to {}'.format(self, value))
+
+  def _resolve_value(self, value):
+    if isinstance(value, Assignable):
+      self.adapt(value)
+    elif isinstance(value, abc.Sequence):
+      DFACCTOAssert(all(isinstance(part, Assignable) for part in value),
+        'List assignment to {} must only contain assignable elements'.format(self))
+      vec = len(value)
+      for idx,part in enumerate(value):
+        self.adapt(part, part_of=vec)
+    else:
+      raise DFACCTOError(
+        'Assignment to {} must be an assignable element or list of such'.format(self))
+    self._value = value
+
 

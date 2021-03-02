@@ -3,6 +3,7 @@ from contextlib import contextmanager
 import re
 
 from .util import DFACCTOAssert, DFACCTOError
+from .common import LiteralValue
 from .role import Role
 from .type import Type
 from .entity import Entity
@@ -185,6 +186,12 @@ class Frontend:
   def in_entity_context(self):
     return self._entity is not None
 
+  def literal_reference(self, ref):
+    return LiteralValue(ref)
+
+  def literal_vector_reference(self, *refs):
+    return tuple(LiteralValue(ref) for ref in refs)
+
   def global_statement(self, **directives):
     DFACCTOAssert(self.in_global_context, 'Global statement must appear in the global context')
     props = Decoder.read_props(directives)
@@ -227,7 +234,8 @@ class Frontend:
     props = Decoder.read_props(directives)
 
     type = self._package.get_type(type_name, pkg_name)
-    self._package.add_constant(name, type, size_name, value, props)
+    size = size_name and self._package.get_constant(size_name, self._package.name)
+    self._package.add_constant(name, type, size, value, props)
 
   def entity_declaration(self, name, **directives):
     DFACCTOAssert(self.in_global_context, 'Entity declaration must appear in the global context')

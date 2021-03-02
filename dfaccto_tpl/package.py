@@ -62,7 +62,7 @@ class Package(Element):
   def add_type(self, name, role, props):
     return Type(self, name, role, props)
 
-  def add_constant(self, name, type, size_name, value, props):
-    return Constant(self, name, type, size_name, value, props=props)
+  def add_constant(self, name, type, size, value, props):
+    return Constant(self, name, type, size, value, props=props)
 
 

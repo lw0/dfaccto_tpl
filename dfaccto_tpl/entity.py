@@ -16,10 +16,6 @@ class EntityCommon:
     self._identifiers = Registry()
 
   @property
-  def is_entity(self):
-    return True
-
-  @property
   def has_role(self):
     return False
 
@@ -28,40 +24,24 @@ class EntityCommon:
     return self._generics
 
   @property
-  def has_generics(self):
-    return len(self._generics) > 0
-
-
-  @property
   def ports(self):
     return self._ports
-
-  @property
-  def has_ports(self):
-    return len(self._ports) > 0
-
 
   @property
   def instances(self):
     return self._instances
 
   @property
-  def has_instances(self):
-    return len(self._instances) > 0
-
-
-  @property
   def signals(self):
     return self._signals
 
   @property
-  def has_signals(self):
-    return len(self._signals) > 0
-
-
-  @property
   def connectables(self):
     return self._connectables
+
+  @property
+  def identifiers(self):
+    return self._identifiers
 
   @property
   def used_packages(self):
@@ -72,12 +52,7 @@ class EntityCommon:
     return IndexWrapper(packages)
 
 
-  @property
-  def identifiers(self):
-    return self._identifiers
-
-
-class InstEntity(EntityCommon, Instantiable, Element):
+class Instance(EntityCommon, Instantiable, Element):
   def __init__(self, entity, parent, name, props):
     new_props = entity.props.copy()
     new_props.update(props)
@@ -106,7 +81,7 @@ class InstEntity(EntityCommon, Instantiable, Element):
     return self._parent
 
   def assign(self, generic_name, value):
-    self.generics.lookup(generic_name).assign(value)
+    self.generics.lookup(generic_name).value_equals(value)
 
   def connect(self, port_name, to):
     self.ports.lookup(port_name).connect(to)
@@ -152,8 +127,6 @@ class Entity(EntityCommon, Instantiable, Element):
     return Port(self, name, type, size_generic)
 
   def instantiate(self, parent, name, props):
-    return InstEntity(self, parent, name, props)
-
-
+    return Instance(self, parent, name, props)
 
 

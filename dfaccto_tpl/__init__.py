@@ -2,7 +2,7 @@ from .util import DFACCTOError, DFACCTOAssert, Seq, IndexWrapper, Registry # Ind
 from .context import Context
 from .constant import Constant
 from .package import Package
-from .entity import Entity#, InstEntity
+from .entity import Entity#, Instance
 from .frontend import Frontend
 from .generic import Generic #, InstGeneric
 from .port import Port #, InstPort
