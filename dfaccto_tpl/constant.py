@@ -1,10 +1,10 @@
-from .common import ValueContainer, Connectable, Assignable
+from .common import ValueContainer, Assignable
 from .element import PackageElement
 from .util import DFACCTOAssert, safe_str
 from .role import Role
 
 
-class Constant(PackageElement, ValueContainer, Connectable, Assignable):
+class Constant(PackageElement, ValueContainer, Assignable):
   def __init__(self, package, name, type, size_constant, value=None, *, props):
     if size_constant is not None:
       size_constant.vector_equals(False)
@@ -22,7 +22,7 @@ class Constant(PackageElement, ValueContainer, Connectable, Assignable):
 
     PackageElement.__init__(self, package, name, 'c_{name}{dir}', props)
     ValueContainer.__init__(self, type, size_constant is not None, size_constant and size_constant.raw_value, value)
-    Connectable.__init__(self)
+    Assignable.__init__(self)
     self._size_constant = size_constant
 
     self.package.constants.register(self.name, self)

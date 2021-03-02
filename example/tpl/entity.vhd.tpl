@@ -102,20 +102,38 @@ begin
       pi_rst_n => pi_rst_n{{?ports}},{{|ports}});{{/ports}}
 {{# ports}}
 {{#  connections}}
-{{#   is_complex}}
+{{?   is_literal}}
+{{#    is_complex}}
+      {{identifier_ms}}({{_idx}}) => {{*type.x_format_ms}},
+      {{identifier_sm}}({{_idx}}) => {{*type.x_format_sm}}{{?_last}}{{?'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
+{{|    is_complex}}
+      {{identifier}}({{_idx}}) => {{*type.x_format}}{{?_last}}{{?'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
+{{/    is_complex}}
+{{|   is_literal}}
+{{#    is_complex}}
       {{'identifier_ms}}({{_idx}}) => {{qualified_ms}},
       {{'identifier_sm}}({{_idx}}) => {{qualified_sm}}{{?_last}}{{?'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
-{{|   is_complex}}
+{{|    is_complex}}
       {{'identifier}}({{_idx}}) => {{qualified}}{{?_last}}{{?'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
-{{/   is_complex}}
+{{/    is_complex}}
+{{/   is_literal}}
 {{/  connections}}
 {{#  connection}}
+{{?   is_literal}}
+{{#   is_complex}}
+      {{identifier_ms}} => {{*type.x_format_ms}},
+      {{identifier_sm}} => {{*type.x_format_sm}}{{?_last}});{{|_last}},{{/_last}}
+{{|   is_complex}}
+      {{identifier}} => {{*type.x_format}}{{?_last}});{{|_last}},{{/_last}}
+{{/   is_complex}}
+{{|   is_literal}}
 {{#   is_complex}}
       {{'identifier_ms}} => {{qualified_ms}},
       {{'identifier_sm}} => {{qualified_sm}}{{?_last}});{{|_last}},{{/_last}}
 {{|   is_complex}}
       {{'identifier}} => {{qualified}}{{?_last}});{{|_last}},{{/_last}}
 {{/   is_complex}}
+{{/   is_literal}}
 {{/  connection}}
 {{^  is_connected}}
 {{?   is_complex}}

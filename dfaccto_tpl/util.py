@@ -5,7 +5,7 @@ import collections.abc as abc
 
 class DFACCTOError(Exception):
   def __init__(self, msg):
-    breakpoint()
+    # breakpoint()
     self.msg = msg
 
 

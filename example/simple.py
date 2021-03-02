@@ -56,7 +56,7 @@ with Ent('Toplevel',
         p_hsOut=To('hsOut'),
         p_dataIn=To('dataIntMid'),
         p_dataOut=To('dataOut'),
-        p_dummy=Val('LogicNull'),
+        p_dummy=Lit(False),
         p_done=To('doneLast'))
 
   Ins('Barrier',

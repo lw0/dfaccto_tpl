@@ -6,14 +6,88 @@ from .common import Instantiable
 from .element import Element
 
 
-class EntityCommon:
-  def __init__(self):
+
+class Instance(Instantiable, Element):
+  def __init__(self, entity, parent, name, props):
+    new_props = entity.props.copy()
+    new_props.update(props)
+
+    Element.__init__(self, entity.context, name, 'i_{name}', new_props)
+    Instantiable.__init__(self, entity)
+    # EntityCommon.__init__(self)
+    self._parent = parent
+    self._ports = Registry()
+    self._generics = Registry()
+    self._identifiers = Registry()
+
+    for generic in entity.generics.contents():
+      generic.instantiate(self)
+    for port in entity.ports.contents():
+      port.instantiate(self)
+
+    self._parent.instances.register(self.name, self)
+    self._parent.identifiers.register(self.identifier, self)
+
+  def __str__(self):
+    try:
+      return '({}).i_{}:{}'.format(self.parent, self.name, self.base)
+    except:
+      return safe_str(self)
+
+  @property
+  def parent(self):
+    return self._parent
+
+  @property
+  def has_role(self):
+    return False
+
+  @property
+  def generics(self):
+    return self._generics
+
+  @property
+  def ports(self):
+    return self._ports
+
+  @property
+  def identifiers(self):
+    return self._identifiers
+
+  @property
+  def used_packages(self):
+    # TODO-lw also consider constants used as values!
+    packages = set()
+    for conn in self._connectables.contents():
+      packages.add(conn.type.package)
+    return IndexWrapper(packages)
+
+  def assign(self, generic_name, value):
+    self.generics.lookup(generic_name).value_equals(value)
+
+  def connect(self, port_name, to):
+    self.ports.lookup(port_name).connect(to)
+
+
+class Entity(Instantiable, Element):
+  def __init__(self, context, name, props):
+    Element.__init__(self, context, name, '{name}', props)
+    Instantiable.__init__(self)
     self._ports = Registry()
     self._generics = Registry()
     self._instances = Registry()
     self._signals = Registry()
     self._connectables = Registry()
     self._identifiers = Registry()
+
+    self.context.entities.register(self.name, self)
+    self.context.identifiers.register(self.identifier, self)
+
+  def __str__(self):
+    try:
+      return self.name
+    except:
+      return safe_str(self)
 
   @property
   def has_role(self):
@@ -50,57 +124,6 @@ class EntityCommon:
     for conn in self._connectables.contents():
       packages.add(conn.type.package)
     return IndexWrapper(packages)
-
-
-class Instance(EntityCommon, Instantiable, Element):
-  def __init__(self, entity, parent, name, props):
-    new_props = entity.props.copy()
-    new_props.update(props)
-
-    Element.__init__(self, entity.context, name, 'i_{name}', new_props)
-    Instantiable.__init__(self, entity)
-    EntityCommon.__init__(self)
-    self._parent = parent
-
-    for generic in entity.generics.contents():
-      generic.instantiate(self)
-    for port in entity.ports.contents():
-      port.instantiate(self)
-
-    self._parent.instances.register(self.name, self)
-    self._parent.identifiers.register(self.identifier, self)
-
-  def __str__(self):
-    try:
-      return '({}).i_{}:{}'.format(self.parent, self.name, self.base)
-    except:
-      return safe_str(self)
-
-  @property
-  def parent(self):
-    return self._parent
-
-  def assign(self, generic_name, value):
-    self.generics.lookup(generic_name).value_equals(value)
-
-  def connect(self, port_name, to):
-    self.ports.lookup(port_name).connect(to)
-
-
-class Entity(EntityCommon, Instantiable, Element):
-  def __init__(self, context, name, props):
-    Element.__init__(self, context, name, '{name}', props)
-    Instantiable.__init__(self)
-    EntityCommon.__init__(self)
-
-    self.context.entities.register(self.name, self)
-    self.context.identifiers.register(self.identifier, self)
-
-  def __str__(self):
-    try:
-      return self.name
-    except:
-      return safe_str(self)
 
   def get_generic(self, name):
     if self.generics.has(name):

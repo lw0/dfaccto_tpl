@@ -1,7 +1,7 @@
 import collections.abc as abc
 
 from .util import DFACCTOAssert, safe_str
-from .common import Instantiable, Typed, ValueContainer, Connectable, Assignable
+from .common import Instantiable, Typed, ValueContainer, Assignable
 from .element import EntityElement
 from .role import Role
 
@@ -42,7 +42,7 @@ class InstGeneric(ValueContainer, Instantiable, EntityElement):
     return True
 
 
-class Generic(EntityElement, Typed, Connectable, Instantiable, Assignable):
+class Generic(EntityElement, Typed, Instantiable, Assignable):
   def __init__(self, entity, name, type, size_generic):
     if size_generic is not None:
       size_generic.vector_equals(False)
@@ -61,7 +61,7 @@ class Generic(EntityElement, Typed, Connectable, Instantiable, Assignable):
     EntityElement.__init__(self, entity, name, 'g_{name}{dir}')
     # Generic or False are not ValueContainers, size will be determined here
     Typed.__init__(self, type, size_generic is not None, size_generic)
-    Connectable.__init__(self)
+    Assignable.__init__(self)
     Instantiable.__init__(self)
 
     self.entity.generics.register(self.name, self)

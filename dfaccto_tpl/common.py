@@ -34,6 +34,10 @@ class Typed:
       # TODO-lw separate role adaption masks to simplify and generalize this
       #  temp-solution: only signals may have unknown type here,
       #  so force base type to ensure proper signal role
+      #   Assignables must have input/view roles fixed
+      #   Connectable Ports have input/output/master/slave/view/pass
+      #   Connectable Signals have simple/complex
+      # TODO-lw also extend example to cover most combinations
       if self.knows_type:
         other.type_equals(self.type.base)
       elif other.knows_type:
@@ -221,13 +225,15 @@ class Connectable:
   #   return self._connections
 
 
-class Assignable:
-  pass
+class Assignable(Connectable):
+  def __init__(self):
+    Connectable.__init__(self)
 
 
 class LiteralValue(Typed, Assignable):
   def __init__(self, value):
     Typed.__init__(self)
+    Assignable.__init__(self)
     self._value = value
 
   def __str__(self):
