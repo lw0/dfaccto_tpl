@@ -24,10 +24,6 @@ class Package(Element):
       return safe_str(self)
 
   @property
-  def is_package(self):
-    return True
-
-  @property
   def has_role(self):
     return False
 
@@ -59,8 +55,8 @@ class Package(Element):
     else:
       return self.context.get_constant(const_name, pkg_name)
 
-  def add_type(self, name, role, props):
-    return Type(self, name, role, props)
+  def add_type(self, name, is_complex, props):
+    return Type(self, name, is_complex, props)
 
   def add_constant(self, name, type, size, value, props):
     return Constant(self, name, type, size, value, props=props)

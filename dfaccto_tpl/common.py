@@ -2,6 +2,7 @@ from collections import defaultdict
 import collections.abc as abc
 
 from .util import DFACCTOError, DFACCTOAssert, IndexedObj, ValueStore, IndexWrapper, DeferredValue
+from .role import Role
 from .element import PackageElement, EntityElement
 
 
@@ -19,9 +20,30 @@ class Instantiable:
     return self._base is not None
 
 
+class Connectable:
+  def __init__(self, is_literal=False):
+    self._connections = defaultdict(list)
+    self._is_literal = is_literal
+
+  @property
+  def is_literal(self):
+    return self._is_literal
+
+  def connect_port(self, port_inst, idx=None):
+    DFACCTOAssert(port_inst.is_input or port_inst.is_view or len(self._connections[port_inst.role]) == 0,
+      'Connectable {} can not be connected to multiple ports of role {}'.format(self, port_inst.role.name))
+    self._connections[port_inst.role].append(IndexedObj(port_inst, idx, None))
+
+
+class Assignable(Connectable):
+  def __init__(self, is_literal=False):
+    Connectable.__init__(self, is_literal)
+
+
 class Typed:
-  def __init__(self, type=None, vector=None, size=None, on_type_set=None):
+  def __init__(self, role, type=None, vector=None, size=None, on_type_set=None):
     self._on_type_set = on_type_set
+    self._role = role
     self._type = DeferredValue(self._resolve_type)
     self._vector = DeferredValue(self._resolve_vector)
     self._size = DeferredValue(self._resolve_size)
@@ -31,21 +53,7 @@ class Typed:
 
   def adapt(self, other, part_of=None):
     if isinstance(other, Typed):
-      # TODO-lw separate role adaption masks to simplify and generalize this
-      #  temp-solution: only signals may have unknown type here,
-      #  so force base type to ensure proper signal role
-      #   Assignables must have input/view roles fixed
-      #   Connectable Ports have input/output/master/slave/view/pass
-      #   Connectable Signals have simple/complex
-      # TODO-lw also extend example to cover most combinations
-      if self.knows_type:
-        other.type_equals(self.type.base)
-      elif other.knows_type:
-        self.type_equals(other.type.base)
-      else:
-        self.type_equals(other._type)
-      # self.type_equals(other._type)
-
+      self.type_equals(other._type)
       if part_of is None:
         self.vector_equals(other._vector)
         self.size_equals(other._size)
@@ -60,6 +68,12 @@ class Typed:
         self.vector_equals(True)
         self.size_equals(LiteralValue(part_of))
 
+  def role_equals(self, role):
+    new_role = self._role.refine(role)
+    if new_role is None:
+      raise DFACCTOError('Role "{}" of {} can not be refined with incompatible role "{}"'.format(self.role, self, role))
+    self._role = new_role
+
   def type_equals(self, type):
     if type is None:
       return
@@ -67,10 +81,11 @@ class Typed:
       self._type.assign(type)
     elif isinstance(type, DeferredValue):
       type.assign(self._type)
-    elif not self._type.base.is_compatible(type):
+    elif self._type != type:
       raise DFACCTOError("Type of {} is already set and can not be changed to {}".format(self, type))
 
   def _resolve_type(self, type):
+    self.role_equals(type.role)
     self._type = type
     if self._on_type_set is not None:
       self._on_type_set()
@@ -103,86 +118,93 @@ class Typed:
   def _resolve_size(self, size):
     self._size = size
 
+
   @property
   def has_role(self):
     return True
 
   @property
-  def knows_role(self):
-    return self._type is not None
+  def role(self):
+    return self._role
 
   @property
-  def role(self):
-    return self._type and self._type.role
+  def knows_specific(self):
+    return self._role.knows_specific
+  @property
+  def is_input(self):
+    return self._role.is_input
+  @property
+  def is_output(self):
+    return self._role.is_output
+  @property
+  def is_unidir(self):
+    return self._role.is_unidir
+  @property
+  def is_slave(self):
+    return self._role.is_slave
+  @property
+  def is_master(self):
+    return self._role.is_master
+  @property
+  def is_view(self):
+    return self._role.is_view
+  @property
+  def is_pass(self):
+    return self._role.is_pass
+  @property
+  def is_bidir(self):
+    return self._role.is_bidir
+
+  @property
+  def knows_complex(self):
+    return self._role.knows_complex
+  @property
+  def is_simple(self):
+    return self._role.is_simple
+  @property
+  def is_complex(self):
+    return self._role.is_complex
+
+  @property
+  def knows_entity(self):
+    return self._role.knows_entity
+  @property
+  def is_port(self):
+    return self._role.is_port
+  @property
+  def is_const(self):
+    return self._role.is_const
+  @property
+  def is_signal(self):
+    return self._role.is_signal
+
+  @property
+  def mode(self):
+    return self._role.mode
+  @property
+  def mode_ms(self):
+    return self._role.mode_ms
+  @property
+  def mode_sm(self):
+    return self._role.mode_sm
+  @property
+  def cmode(self):
+    return self._role.cmode
+  @property
+  def cmode_ms(self):
+    return self._role.cmode_ms
+  @property
+  def cmode_sm(self):
+    return self._role.cmode_sm
 
 
   @property
   def knows_type(self):
-    return self._type is not None
+    return not isinstance(self._type, DeferredValue)
 
   @property
   def type(self):
     return self._type
-
-  @property
-  def is_directed(self):
-    return self._type is not None and self._type.is_directed
-
-  @property
-  def is_input(self):
-    return self._type is not None and self._type.is_input
-
-  @property
-  def is_output(self):
-    return self._type is not None and self._type.is_output
-
-  @property
-  def is_simple(self):
-    return self._type is not None and self._type.is_simple
-
-  @property
-  def is_slave(self):
-    return self._type is not None and self._type.is_slave
-
-  @property
-  def is_master(self):
-    return self._type is not None and self._type.is_master
-
-  @property
-  def is_view(self):
-    return self._type is not None and self._type.is_view
-
-  @property
-  def is_pass(self):
-    return self._type is not None and self._type.is_pass
-
-  @property
-  def is_complex(self):
-    return self._type is not None and self._type.is_complex
-
-  @property
-  def mode(self):
-    return self._type and self._type.mode
-
-  @property
-  def mode_ms(self):
-    return self._type and self._type.mode_ms
-
-  @property
-  def mode_sm(self):
-    return self._type and self._type.mode_sm
-
-  @property
-  def cmode(self):
-    return self._type and self._type.cmode
-
-  @property
-  def cmode_ms(self):
-    return self._type and self._type.cmode_ms
-
-  @property
-  def cmode_sm(self):
-    return self._type and self._type.cmode_sm
 
 
   @property
@@ -207,33 +229,10 @@ class Typed:
     return self._size
 
 
-class Connectable:
-  def __init__(self):
-    self._connections = defaultdict(list)
-
-  def connect_port(self, port_inst, idx=None):
-    if self.has_role:
-      DFACCTOAssert(self.role.is_compatible(port_inst.role),
-        'Can not connect {} {} to {} {}'.format(self.role.name, self, port_inst.role.name, port_inst))
-    DFACCTOAssert(port_inst.is_input or port_inst.is_view or len(self._connections[port_inst.role]) == 0,
-      'Connectable {} can not be connected to multiple ports of role {}'.format(self, port_inst.role.name))
-    self._connections[port_inst.role].append(IndexedObj(port_inst, idx, None))
-
-  # TODO-lw flatten and IndexWrapper?
-  # @property
-  # def connections(self):
-  #   return self._connections
-
-
-class Assignable(Connectable):
-  def __init__(self):
-    Connectable.__init__(self)
-
-
 class LiteralValue(Typed, Assignable):
   def __init__(self, value):
-    Typed.__init__(self)
-    Assignable.__init__(self)
+    Typed.__init__(self, Role.Const)
+    Assignable.__init__(self, is_literal=True)
     self._value = value
 
   def __str__(self):
@@ -248,14 +247,10 @@ class LiteralValue(Typed, Assignable):
   def value(self):
     return self._value
 
-  @property
-  def is_literal(self):
-    return True
-
 
 class ValueContainer(Typed):
-  def __init__(self, type, vector, size, value=None):
-    Typed.__init__(self, type, vector, size)
+  def __init__(self, role, type, vector, size, value=None):
+    Typed.__init__(self, role, type, vector, size)
     self._value = DeferredValue(self._resolve_value)
     self.value_equals(value)
 

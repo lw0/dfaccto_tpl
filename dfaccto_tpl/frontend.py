@@ -5,9 +5,7 @@ import re
 from .util import DFACCTOAssert, DFACCTOError
 from .common import LiteralValue
 from .role import Role
-from .type import Type
 from .entity import Entity
-from .signal import Signal
 from .package import Package
 
 
@@ -94,9 +92,9 @@ class Decoder:
     if simple == complex:
       raise DFACCTOError('Type role must be either simple or complex')
     elif simple:
-      return Role.Simple
+      return False
     else: # complex
-      return Role.Complex
+      return True
 
   @classmethod
   def read_props(cls, directives):
@@ -121,7 +119,7 @@ class Decoder:
         generics.append((name, type_name, pkg_name, size_name))
       elif (res := cls.port_role_key(key)) is not None:
         name, role = res
-        DFACCTOAssert(role.is_directed, 'Invalid port role "{}"'.format(role.name))
+        DFACCTOAssert(role.is_port, 'Invalid port role "{}"'.format(role.name))
         type_name, pkg_name, size_name = cls.type_value(val)
         ports.append((name, role, type_name, pkg_name, size_name))
       elif (res := cls.prop_key(key)) is not None:
@@ -222,10 +220,10 @@ class Frontend:
   def type_declaration(self, name, simple=False, complex=False, **directives):
     DFACCTOAssert(self.in_package_context, 'Type declaration must appear in a package context')
     name = Decoder.name_value(name)
-    role = Decoder.type_role_value(simple, complex)
+    is_complex = Decoder.type_role_value(simple, complex)
     props = Decoder.read_props(directives)
 
-    self._package.add_type(name, role, props)
+    self._package.add_type(name, is_complex, props)
 
   def constant_declaration(self, name, type, value=None, **directives):
     DFACCTOAssert(self.in_package_context, 'Constant declaration must appear in a package context')
@@ -250,9 +248,9 @@ class Frontend:
       entity.add_generic(name, type, size)
 
     for name, role, type_name, pkg_name, size_name in ports:
-      type = self._context.get_type(type_name, pkg_name).derive(role)
+      type = self._context.get_type(type_name, pkg_name)
       size = size_name and entity.get_generic(size_name)
-      entity.add_port(name, type, size)
+      entity.add_port(name, role, type, size)
 
     return self.entity_context(entity)
 

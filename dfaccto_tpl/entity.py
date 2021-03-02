@@ -146,8 +146,8 @@ class Entity(Instantiable, Element):
   def add_generic(self, name, type, size_generic):
     return Generic(self, name, type, size_generic)
 
-  def add_port(self, name, type, size_generic):
-    return Port(self, name, type, size_generic)
+  def add_port(self, name, role, type, size_generic):
+    return Port(self, name, role, type, size_generic)
 
   def instantiate(self, parent, name, props):
     return Instance(self, parent, name, props)

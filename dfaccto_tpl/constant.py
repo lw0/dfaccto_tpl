@@ -7,21 +7,11 @@ from .role import Role
 class Constant(PackageElement, ValueContainer, Assignable):
   def __init__(self, package, name, type, size_constant, value=None, *, props):
     if size_constant is not None:
+      size_constant.role_equals(Role.Const)
       size_constant.vector_equals(False)
 
-    if type.is_complex:
-      if not type.is_directed:
-        type = type.derive(Role.View)
-      elif not type.is_view:
-        raise DFACCTOError('Complex constants must have view role')
-    else:
-      if not type.is_directed:
-        type = type.derive(Role.Input)
-      elif not type.is_input:
-        raise DFACCTOError('Simple constants must have input role')
-
     PackageElement.__init__(self, package, name, 'c_{name}{dir}', props)
-    ValueContainer.__init__(self, type, size_constant is not None, size_constant and size_constant.raw_value, value)
+    ValueContainer.__init__(self, Role.Const, type, size_constant is not None, size_constant and size_constant.raw_value, value)
     Assignable.__init__(self)
     self._size_constant = size_constant
 
@@ -42,10 +32,6 @@ class Constant(PackageElement, ValueContainer, Assignable):
         return '({}).c_{}:{}:={}'.format(self.package, self.name, self.type, self.value)
     except:
       return safe_str(self)
-
-  @property
-  def is_constant(self):
-    return True
 
   @property
   def size_constant(self):

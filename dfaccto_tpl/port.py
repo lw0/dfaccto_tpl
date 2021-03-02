@@ -3,6 +3,7 @@ import collections.abc as abc
 from .util import DFACCTOAssert, IndexWrapper, DFACCTOError, safe_str
 from .common import Typed, Connectable, Instantiable
 from .element import EntityElement
+from .role import Role
 
 
 class InstPort(Typed, Instantiable, EntityElement):
@@ -12,7 +13,7 @@ class InstPort(Typed, Instantiable, EntityElement):
     EntityElement.__init__(self, inst_entity, port.name, 'p{mode}_{name}{dir}')
     Instantiable.__init__(self, port)
     # size.raw_value may be DeferredValue and will propagate if necessary
-    Typed.__init__(self, port.type, size is not None, size and size.raw_value)
+    Typed.__init__(self, port.role, port.type, size is not None, size and size.raw_value)
 
     self._connection = None
 
@@ -59,10 +60,6 @@ class InstPort(Typed, Instantiable, EntityElement):
     self._connection = to
 
   @property
-  def is_port(self):
-    return True
-
-  @property
   def connection(self):
     if isinstance(self._connection, Connectable):
       return self._connection
@@ -80,12 +77,14 @@ class InstPort(Typed, Instantiable, EntityElement):
 
 
 class Port(EntityElement, Typed, Connectable, Instantiable):
-  def __init__(self, entity, name, type, size_generic):
+  def __init__(self, entity, name, role, type, size_generic):
     if size_generic is not None:
+      # Generics used for size must be simple scalar values
+      size_generic.role_equals(Role.Simple)
       size_generic.vector_equals(False)
 
     EntityElement.__init__(self, entity, name, 'p{mode}_{name}{dir}')
-    Typed.__init__(self, type, size_generic is not None, size_generic)
+    Typed.__init__(self, role, type, size_generic is not None, size_generic)
     Connectable.__init__(self)
     Instantiable.__init__(self)
 
@@ -108,9 +107,5 @@ class Port(EntityElement, Typed, Connectable, Instantiable):
 
   def instantiate(self, inst_entity):
     return InstPort(self, inst_entity)
-
-  @property
-  def is_port(self):
-    return True
 
 

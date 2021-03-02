@@ -17,6 +17,9 @@ class Element:
   def __getattr__(self, key):
     if key.startswith('x_') and key[2:] in self._props:
       return self._props[key[2:]]
+    elif key.startswith('is_a_'):
+      name = key[5:].lower()
+      return any(name == cls.__name__.lower() for cls in type(self).mro())
     else:
       raise AttributeError(key)
 
@@ -36,9 +39,9 @@ class Element:
   def identifier(self):
     if self._identifier is None:
       if self.has_role:
-        if self.knows_role and self.role.is_simple:
+        if self.role.knows_complex and self.role.is_simple:
           self._identifier = self._identifier_pattern.format(name=self._name,
-                                                             mode=self.cmode,
+                                                             mode=self.role.cmode or '',
                                                              vec='', dir='')
       else:
         self._identifier = self._identifier_pattern.format(name=self._name,
@@ -49,18 +52,18 @@ class Element:
   @property
   def identifier_ms(self):
     if self._identifier_ms is None:
-      if self.has_role and self.knows_role and self.role.is_complex:
+      if self.has_role and self.role.knows_complex and self.role.is_complex:
         self._identifier_ms = self._identifier_pattern.format(name=self._name,
-                                                              mode=self.cmode_ms,
+                                                              mode=self.role.cmode_ms or '',
                                                               vec='', dir='_ms')
     return self._identifier_ms
 
   @property
   def identifier_sm(self):
     if self._identifier_sm is None:
-      if self.has_role and self.knows_role and self.role.is_complex:
+      if self.has_role and self.role.knows_complex and self.role.is_complex:
         self._identifier_sm = self._identifier_pattern.format(name=self._name,
-                                                              mode=self.cmode_sm,
+                                                              mode=self.role.cmode_sm or '',
                                                               vec='', dir='_sm')
     return self._identifier_sm
 
@@ -68,9 +71,9 @@ class Element:
   def identifier_v(self):
     if self._has_vector and self._identifier_v is None:
       if self.has_role:
-        if self.knows_role and self.role.is_simple:
+        if self.role.knows_complex and self.role.is_simple:
           self._identifier_v = self._identifier_pattern.format(name=self._name,
-                                                               mode=self.cmode,
+                                                               mode=self.role.cmode or '',
                                                                vec='_v', dir='')
       else:
         self._identifier_v = self._identifier_pattern.format(name=self._name,
@@ -81,18 +84,18 @@ class Element:
   @property
   def identifier_v_ms(self):
     if self._has_vector and self._identifier_v_ms is None:
-      if self.has_role and self.knows_role and self.role.is_complex:
+      if self.has_role and self.role.knows_complex and self.role.is_complex:
         self._identifier_v_ms = self._identifier_pattern.format(name=self._name,
-                                                                mode=self.cmode_ms,
+                                                                mode=self.role.cmode_ms or '',
                                                                 vec='_v', dir='_ms')
     return self._identifier_v_ms
 
   @property
   def identifier_v_sm(self):
     if self._has_vector and self._identifier_v_sm is None:
-      if self.has_role and self.knows_role and self.role.is_complex:
+      if self.has_role and self.role.knows_complex and self.role.is_complex:
         self._identifier_v_sm = self._identifier_pattern.format(name=self._name,
-                                                                mode=self.cmode_sm,
+                                                                mode=self.role.cmode_sm or '',
                                                                 vec='_v', dir='_sm')
     return self._identifier_v_sm
 

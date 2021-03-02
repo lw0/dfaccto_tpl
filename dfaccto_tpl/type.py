@@ -3,136 +3,56 @@ from enum import Enum
 
 from .element import PackageElement
 from .util import DFACCTOAssert, safe_str
+from .role import Role
 
 
 class Type(PackageElement):
-  def __init__(self, package, name, role, props):
+  def __init__(self, package, name, is_complex, props):
+    self._role = Role.Complex if is_complex else Role.Simple
     PackageElement.__init__(self, package, name, 't_{name}{vec}{dir}', props, has_vector=True)
-    self._role = role
     self.package.types.register(self.name, self)
     decl_name = self.package.declarations.unique_name(self.name) # Avoid collisions with constant names
     self.package.declarations.register(decl_name, self)
-    if self.role.is_simple:
+    if self.is_simple:
       self.package.identifiers.register(self.identifier, self)
       self.package.identifiers.register(self.identifier_v, self)
-    elif self.role.is_complex:
+    elif self.is_complex:
       self.package.identifiers.register(self.identifier_ms, self)
       self.package.identifiers.register(self.identifier_sm, self)
       self.package.identifiers.register(self.identifier_v_ms, self)
       self.package.identifiers.register(self.identifier_v_sm, self)
-    self._derived_from = None
-    self._derivates = {self.role: self}
 
   def __str__(self):
     try:
-      return '({}).t{}_{}'.format(self.package, self.role, self.name)
+      return '({}).t{}_{}'.format(self.package, self._role.char, self.name)
     except:
       return safe_str(self)
 
-  def derive(self, role):
-    DFACCTOAssert(self._derived_from is None,
-      'Can not derive from already derived type {}'.format(self))
-    DFACCTOAssert(self.role.is_compatible(role),
-      'Can not derive incompatible role {} from type {}'.format(role, self))
-    DFACCTOAssert(role.is_directed,
-      'Can not derive undirected role {} from type {}'.format(role, self))
-    if role in self._derivates:
-      return self._derivates[role]
-    derivate = copy(self)
-    derivate._role = role
-    derivate._derived_from = self
-    self._derivates[role] = derivate
-    return derivate
-
-  def is_compatible(self, other):
-    if self.name != other.name:
+  def __eq__(self, other):
+    if isinstance(other, Type):
+      return self._role == other._role and self.name == other.name
+    else:
       return False
-    return self._role.is_compatible(other._role)
-
-  @property
-  def is_type(self):
-    return True
 
   @property
   def has_role(self):
     return True
 
   @property
-  def knows_role(self):
-    return True
-
-  @property
   def role(self):
     return self._role
 
-  @property
-  def is_derived(self):
-    return self._derived_from is not None
 
   @property
-  def base(self):
-    if self._derived_from is None:
-      return self
-    return self._derived_from
-
-  @property
-  def is_directed(self):
-    return self._role.is_directed
-
-  @property
-  def is_input(self):
-    return self._role.is_input
-
-  @property
-  def is_output(self):
-    return self._role.is_output
-
-  @property
-  def is_simple(self):
-    return self._role.is_simple
-
-  @property
-  def is_view(self):
-    return self._role.is_view
-
-  @property
-  def is_pass(self):
-    return self._role.is_pass
-
-  @property
-  def is_slave(self):
-    return self._role.is_slave
-
-  @property
-  def is_master(self):
-    return self._role.is_master
+  def knows_complex(self):
+    return self._role.knows_complex
 
   @property
   def is_complex(self):
     return self._role.is_complex
 
   @property
-  def mode(self):
-    return self._role.mode
-
-  @property
-  def mode_ms(self):
-    return self._role.mode_ms
-
-  @property
-  def mode_sm(self):
-    return self._role.mode_sm
-
-  @property
-  def cmode(self):
-    return self._role.cmode
-
-  @property
-  def cmode_ms(self):
-    return self._role.cmode_ms
-
-  @property
-  def cmode_sm(self):
-    return self._role.cmode_sm
+  def is_simple(self):
+    return self._role.is_simple
 
 
