@@ -7,9 +7,9 @@ from .role import Role
 
 
 class Type(PackageElement):
-  def __init__(self, package, name, is_complex, props):
+  def __init__(self, package, name, is_complex):
     self._role = Role.Complex if is_complex else Role.Simple
-    PackageElement.__init__(self, package, name, 't_{name}{vec}{dir}', props, has_vector=True)
+    PackageElement.__init__(self, package, name, 't_{name}{vec}{dir}', has_vector=True)
     self.package.types.register(self.name, self)
     decl_name = self.package.declarations.unique_name(self.name) # Avoid collisions with constant names
     self.package.declarations.register(decl_name, self)

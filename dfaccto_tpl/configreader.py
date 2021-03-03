@@ -2,7 +2,7 @@ from pathlib import Path
 import sys
 import traceback
 
-from .util import DFACCTOError, Seq
+from .util import DFACCTOError
 from .context import Context
 from .frontend import Frontend
 
@@ -13,19 +13,18 @@ class ConfigReader:
     self._frontend = Frontend(self._context)
     self._globals = {
       'Inc':    self.read,
-      'Seq':    Seq,
       'Lit':    self._frontend.literal_reference,
       'LitVec': self._frontend.literal_vector_reference,
+      'Ref':    self._frontend.assignable_reference,
+      'RefVec': self._frontend.assignable_vector_reference,
+      'To':     self._frontend.connectable_reference,
+      'ToVec':  self._frontend.connectable_vector_reference,
       'Gbl':    self._frontend.global_statement,
-      'Val':    self._frontend.assignable_reference,
-      'ValVec': self._frontend.assignable_vector_reference,
       'Pkg':    self._frontend.package_declaration,
       'Typ':    self._frontend.type_declaration,
       'Con':    self._frontend.constant_declaration,
       'Ent':    self._frontend.entity_declaration,
-      'Ins':    self._frontend.instance_declaration,
-      'To':     self._frontend.connectable_reference,
-      'ToVec':  self._frontend.connectable_vector_reference}
+      'Ins':    self._frontend.instance_declaration}
     self._executed = set()
     self._base_path = list()
 

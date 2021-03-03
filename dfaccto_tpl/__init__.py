@@ -1,4 +1,4 @@
-from .util import DFACCTOError, DFACCTOAssert, Seq, IndexWrapper, Registry # IndexedObj, ValueStore, safe_str
+from .util import DFACCTOError, DFACCTOAssert, IndexWrapper, Registry # IndexedObj, ValueStore, safe_str
 from .context import Context
 from .constant import Constant
 from .package import Package

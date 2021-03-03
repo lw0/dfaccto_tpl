@@ -38,7 +38,7 @@ with Ent('Toplevel',
         p_hsOut=To('hsIntMid'),
         p_dataIn=To('dataIntFirst'),
         p_dataOut=To('dataIntMid'),
-        p_dummy=Val('Dummy'),
+        p_dummy=Ref('Dummy'),
         p_done=To('doneMid'))
 
   Ins('Inner', name='first',
@@ -47,7 +47,7 @@ with Ent('Toplevel',
         p_hsOut=To('hsIntFirst'),
         p_dataIn=To('dataIn'),
         p_dataOut=To('dataIntFirst'),
-        p_dummy=Val('LogicNull'),
+        p_dummy=Ref('LogicNull'),
         p_done=To('doneFirst'))
 
   Ins('Inner', name='last',
@@ -60,8 +60,8 @@ with Ent('Toplevel',
         p_done=To('doneLast'))
 
   Ins('Barrier',
-      g_Dummy=Val('LogicNull'),
-      g_Mask=Val('Mask'),
+      g_Dummy=Ref('LogicNull'),
+      g_Mask=Ref('Mask'),
         p_doneIn=ToVec('doneFirst', 'doneMid', 'doneLast'),
         p_done=To('done'))
 

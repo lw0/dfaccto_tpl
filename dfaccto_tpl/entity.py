@@ -8,11 +8,8 @@ from .element import Element, PackageElement
 
 
 class Instance(Instantiable, Element):
-  def __init__(self, entity, parent, name, props):
-    new_props = entity.props.copy()
-    new_props.update(props)
-
-    Element.__init__(self, entity.context, name, 'i_{name}', new_props)
+  def __init__(self, entity, parent, name):
+    Element.__init__(self, entity.context, name, 'i_{name}')
     Instantiable.__init__(self, entity)
     # EntityCommon.__init__(self)
     self._parent = parent
@@ -62,8 +59,8 @@ class Instance(Instantiable, Element):
 
 
 class Entity(Instantiable, Element):
-  def __init__(self, context, name, props):
-    Element.__init__(self, context, name, '{name}', props)
+  def __init__(self, context, name):
+    Element.__init__(self, context, name, '{name}')
     Instantiable.__init__(self)
     self._ports = Registry()
     self._generics = Registry()
@@ -111,6 +108,7 @@ class Entity(Instantiable, Element):
 
   @property
   def used_packages(self):
+    # TODO-lw this looks unnecessarily verbose
     packages = set()
     for conn in self._connectables.contents():
       packages.add(conn.type.package)
@@ -118,7 +116,9 @@ class Entity(Instantiable, Element):
       if isinstance(prop, PackageElement):
         packages.add(prop.package)
     for inst in self._instances.contents():
-      # TODO-lw: require inst.props?
+      for prop in inst.props.values():
+        if isinstance(prop, PackageElement):
+          packages.add(prop.package)
       for generic in inst.generics.contents():
         packages.add(generic.type.package)
         if isinstance(generic.size, PackageElement):
@@ -165,7 +165,7 @@ class Entity(Instantiable, Element):
   def add_port(self, name, role, type, size_generic):
     return Port(self, name, role, type, size_generic)
 
-  def instantiate(self, parent, name, props):
-    return Instance(self, parent, name, props)
+  def instantiate(self, parent, name):
+    return Instance(self, parent, name)
 
 

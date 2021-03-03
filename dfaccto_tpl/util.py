@@ -14,18 +14,13 @@ def DFACCTOAssert(condition, msg):
     raise DFACCTOError(msg)
 
 
-def Seq(*items, f):
-  result = []
-  for idx in f:
-    result.extend(item.format(idx) for item in items)
-  return result
-
 def safe_str(obj):
   try:
     return '{}({})'.format(type(obj).__name__,
                            ' '.join('{}={}'.format(k,v) for k,v in vars(self).items()))
   except:
     return repr(obj)
+
 
 class IndexedObj():
   def __init__(self, obj, idx, len):
@@ -78,51 +73,64 @@ class IndexWrapper():
 
 class Registry(abc.Iterable):
   def __init__(self):
-    self.map = OrderedDict()
-    self.idx_cache = {}
+    self._contents = list()
+    self._names = dict()
+    self._idx_cache = dict()
 
   def clear(self):
-    self.map.clear()
-    self.idx_cache.clear()
+    self._contents.clear()
+    self._names.clear()
+    self._idx_cache.clear()
 
   def __iter__(self):
-    return IndexWrapper(self.map.values())
+    return IndexWrapper(self._contents)
 
   def __len__(self):
-    return len(self.map)
+    return len(self._contents)
 
-  # TODO-lw add __getattr__ for indices *and* names
-  #   perhaps replace OrderedDict with [obj] and {name: idx(obj)}
+  def __getitem__(self, key):
+    try:
+      return self._contents[key]
+    except TypeError:
+      idx = self._names[key]
+      return self._contents[idx]
 
   def register(self, name, obj):
-    DFACCTOAssert(name not in self.map, 'Name collision: "{}" is already defined'.format(name))
-    self.map[name] = obj
+    if name in self._names:
+      msg = 'Name collision: "{}" is already defined'.format(name)
+      raise DFACCTOError(msg)
+    self._names[name] = len(self._contents)
+    self._contents.append(obj)
 
   def lookup(self, name):
-    DFACCTOAssert(name in self.map, 'Unresolved reference: "{}" is not defined'.format(name))
-    return self.map[name]
+    if name not in self._names:
+      msg = 'Unresolved reference: "{}" is not defined'.format(name)
+      raise DFACCTOError(msg)
+    idx = self._names[name]
+    return self._contents[idx]
 
   def has(self, name):
-    return name in self.map
+    return name in self._names
 
-  def keys(self):
-    return self.map.keys()
+  def names(self):
+    return self._names.keys()
 
   def contents(self):
-    return self.map.values()
+    return tuple(self._contents)
+
+  def items(self):
+    for key,idx in self._names.items():
+      yield key, self._contents[idx]
 
   def unique_name(self, prefix):
-    idx = self.idx_cache.get(prefix, 0)
+    idx = self._idx_cache.get(prefix, 0)
     candidate = prefix
-    while candidate in self.map:
+    while candidate in self._names:
       candidate = '{}_{:d}'.format(prefix, idx)
       idx += 1
-      self.idx_cache[prefix] = idx
+      self._idx_cache[prefix] = idx
     return candidate
 
-  def dump(self):
-    for key, value in self.map.items():
-      print('{!s}: {!s}'.format(key, value))
 
 
 class UnionFind:

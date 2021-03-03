@@ -6,8 +6,8 @@ from .constant import Constant
 
 class Package(Element):
 
-  def __init__(self, context, name, props):
-    Element.__init__(self, context, name, '{name}', props)
+  def __init__(self, context, name):
+    Element.__init__(self, context, name, '{name}')
 
     self._types = Registry()
     self._constants = Registry()
@@ -75,10 +75,10 @@ class Package(Element):
     else:
       return self.context.get_constant(const_name, pkg_name)
 
-  def add_type(self, name, is_complex, props):
-    return Type(self, name, is_complex, props)
+  def add_type(self, name, is_complex):
+    return Type(self, name, is_complex)
 
-  def add_constant(self, name, type, size, value, props):
-    return Constant(self, name, type, size, value, props=props)
+  def add_constant(self, name, type, size, value):
+    return Constant(self, name, type, size, value)
 
 

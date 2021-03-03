@@ -1,16 +1,19 @@
 from .util import DFACCTOError, Registry, safe_str
+from .element import HasProps
+from .package import Package
+from .entity import Entity
 
 
-class Context:
+class Context(HasProps):
 
   def __init__(self):
-    self._props = dict()
+    HasProps.__init__(self)
     self._identifiers = Registry()
     self._packages = Registry()
     self._entities = Registry()
 
   def clear(self):
-    self._props.clear()
+    self.clear_props()
     self._identifiers.clear()
     self._packages.clear()
     self._entities.clear()
@@ -20,19 +23,6 @@ class Context:
       return '<global>'
     except:
       return safe_str(self)
-
-  def __getattr__(self, key):
-    if key.startswith('x_') and key[2:] in self._props:
-      return self._props[key[2:]]
-    else:
-      raise AttributeError(key)
-
-  # def extend_props(self, more_props):
-  #   pass
-
-  @property
-  def props(self):
-    return self._props
 
   @property
   def identifiers(self):
@@ -83,6 +73,14 @@ class Context:
       pkg = self._packages.lookup(pkg_name)
       constant = pkg.constants.lookup(type_name)
     return constant
+
+  def add_or_get_package(self, name):
+    if self._packages.has(name):
+      return self._packages.lookup(name)
+    return Package(self, name)
+
+  def add_entity(self, name):
+    return Entity(self, name)
 
 
 

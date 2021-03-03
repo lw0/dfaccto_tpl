@@ -111,7 +111,7 @@ class SectionStack:
 
   def reset(self):
     self._stack.clear()
-    self._stack.append([SecKind.Root, None, SectionContainer(), None])
+    self._stack.append([SecKind.Root, None, SectionContainer(), None, None])
 
   @property
   def top(self):
@@ -132,29 +132,41 @@ class SectionStack:
     else:
       return self._stack[-1][3]
 
-  def push_normal(self, key):
-    self._stack.append([SecKind.Normal, key, SectionContainer(), None])
+  @property
+  def pos(self):
+    return self._stack[-1][4]
 
-  def push_enter(self, key):
-    self._stack.append([SecKind.Enter, key, SectionContainer(), None])
+  def token_str(self):
+    token_str = self.kind.token_str(self.key)
+    if self.pos is not None:
+      return '{} at [{}:{}]'.format(token_str, *self.pos)
+    else:
+      return token_str
 
-  def push_check(self, key):
-    self._stack.append([SecKind.Check, key, SectionContainer(), None])
+  def push_normal(self, key, pos):
+    self._stack.append([SecKind.Normal, key, SectionContainer(), None, pos])
 
-  def push_exists(self, key):
-    self._stack.append([SecKind.Exist, key, SectionContainer(), None])
+  def push_enter(self, key, pos):
+    self._stack.append([SecKind.Enter, key, SectionContainer(), None, pos])
 
-  def push_inverted(self, key):
-    self._stack.append([SecKind.Inverted, key, None, SectionContainer()])
+  def push_check(self, key, pos):
+    self._stack.append([SecKind.Check, key, SectionContainer(), None, pos])
 
-  def alternate(self, key):
+  def push_exists(self, key, pos):
+    self._stack.append([SecKind.Exist, key, SectionContainer(), None, pos])
+
+  def push_inverted(self, key, pos):
+    self._stack.append([SecKind.Inverted, key, None, SectionContainer(), pos])
+
+  def alternate(self, key, pos):
     if self.key != key:
       msg = 'Alternative token {} key mismatch with {}'
       raise ParserError(msg.format(SecKind.Alt.token_str(key),
-                                   self.kind.token_str(self.key)))
+                                   self.token_str()))
     if self.kind.can_alternate:
       self.top[0] = self.kind.alternate
       self.top[3] = SectionContainer()
+      self.top[4] = pos
     elif self.kind is SecKind.Root:
       msg = 'Alternative token {} outside section'
       raise ParserError(msg.format(SecKind.Alt.token_str(key)))
@@ -169,9 +181,9 @@ class SectionStack:
     if self.key != key:
       msg = 'Closing token {} key mismatch with {}'
       raise ParserError(msg.format(SecKind.End.token_str(key),
-                                   self.kind.token_str(self.key)))
+                                   self.token_str()))
     if self.kind is not SecKind.Root:
-      kind, key, truthy, falsey = self._stack.pop()
+      kind, key, truthy, falsey, pos = self._stack.pop()
       return (key, truthy and truthy.get(), falsey and falsey.get(), kind.mode)
     else:
       msg = 'Closing token {} without open section'
@@ -179,11 +191,11 @@ class SectionStack:
 
   def take(self):
     if self.kind is SecKind.Root:
-      kind, key, truthy, falsey = self._stack.pop()
+      kind, key, truthy, falsey, pos = self._stack.pop()
       return truthy.get()
     else:
       msg = 'Section token {} is never closed'
-      raise ParserError(msg.format(self.kind.token_str(self.key))) #TODO-lw: keep track of opening token pos
+      raise ParserError(msg.format(self.token_str()))
 
   def append_token(self, token):
     self.content.append_token(token)
@@ -333,7 +345,7 @@ class Parser:
       Filter a raw item stream to decode standalone tokens and indent.
 
         (is_token, is_newline, is_space, content, (line, col))
-        -> (is_token, content, (line, col), indent, is_standalone)
+        -> (is_token, content, (line, col), indent)
 
       The transformation is performed using a finite state machine (see State)
       which tracks item patterns at the beginning of a line and
@@ -358,8 +370,8 @@ class Parser:
           indent = queue[-1][1] # <last item>.content
         elif state is State.Print:
           indent = self._spacify(queue[-1][1]) # <last item>.content
-        # (is_token, content, position, indent, is_standalone)
-        queue.append((True, content, position, indent, False))
+        # (is_token, content, position, indent)
+        queue.append((True, content, position, indent))
       elif is_newline:
         # flush queue
         if state.is_standalone:
@@ -369,17 +381,17 @@ class Parser:
           if state.discard_after:
             queue.popleft()
           # queue should be empty now
-          yield (True, token[1], token[2], token[3], True)
+          yield (True, token[1], token[2], token[3])
           # discard this newline item for standalone tokens
         else:
           while queue:
             yield queue.popleft()
           # pass this newline item for inline content
-          yield (False, content, position, None, None)
+          yield (False, content, position, None)
       else:
         # append literal
-        # (is_token, content, position, indent, is_standalone)
-        queue.append((False, content, position, None, None))
+        # (is_token, content, position, indent)
+        queue.append((False, content, position, None))
       can_standalone = is_token and content[0] in self._standalone_types
       state = state.next(is_token, is_newline, is_space, can_standalone)
     while queue:
@@ -395,10 +407,8 @@ class Parser:
     sections = SectionStack()
     last_pos = (1,1)
     try:
-      for is_token, content, pos, indent, is_standalone in self._filter(self._split(string)): #TODO-lw: remove is_standalone in not needed elsewhere
+      for is_token, content, pos, indent in self._filter(self._split(string)):
         last_pos = pos
-        # token_str = '   (indent={!r}, standalone={!r})'.format(indent, is_standalone) if is_token else ''
-        # print('{} @{:02d}:{:03d} - {!r}{}'.format('Token  ' if is_token else 'Literal', pos[0], pos[1], content, token_str))
         if is_token:
           kind,param = content
           if kind == '':
@@ -410,17 +420,17 @@ class Parser:
           elif kind == '>':
             sections.append_token(PartialToken(param, indent))
           elif kind == '#':
-            sections.push_normal(param)
+            sections.push_normal(param, pos)
           elif kind == '=':
-            sections.push_enter(param)
+            sections.push_enter(param, pos)
           elif kind == '?':
-            sections.push_check(param)
+            sections.push_check(param, pos)
           elif kind == '!':
-            sections.push_exists(param)
+            sections.push_exists(param, pos)
           elif kind == '^':
-            sections.push_inverted(param)
+            sections.push_inverted(param, pos)
           elif kind == '|':
-            sections.alternate(param)
+            sections.alternate(param, pos)
           elif kind == '/':
             key, truthy, falsey, mode = sections.pop(param)
             token = SectionToken(key, truthy, falsey, mode)

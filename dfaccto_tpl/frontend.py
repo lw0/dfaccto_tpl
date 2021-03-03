@@ -98,11 +98,10 @@ class Decoder:
 
   @classmethod
   def read_props(cls, directives):
-    props = dict()
+    props = list()
     for key,val in directives.items():
-      if (res := Decoder.prop_key(key)) is not None:
-        name = res
-        props[name] = val
+      if (name := Decoder.prop_key(key)) is not None:
+        props.append((name, val))
       else:
         raise DFACCTOError('Invalid directive "{}"'.format(key))
     return props
@@ -111,10 +110,9 @@ class Decoder:
   def read_entity(cls, directives):
     generics = list()
     ports = list()
-    props = dict()
+    props = list()
     for key,val in directives.items():
-      if (res := cls.generic_key(key)) is not None:
-        name = res
+      if (name := cls.generic_key(key)) is not None:
         type_name, pkg_name, size_name = cls.type_value(val)
         generics.append((name, type_name, pkg_name, size_name))
       elif (res := cls.port_role_key(key)) is not None:
@@ -122,9 +120,8 @@ class Decoder:
         DFACCTOAssert(role.is_port, 'Invalid port role "{}"'.format(role.name))
         type_name, pkg_name, size_name = cls.type_value(val)
         ports.append((name, role, type_name, pkg_name, size_name))
-      elif (res := cls.prop_key(key)) is not None:
-        name = res
-        props[name] = val
+      elif (name := cls.prop_key(key)) is not None:
+        props.append((name, val))
       else:
         raise DFACCTOError('Invalid directive "{}"'.format(key))
     return (generics, ports, props)
@@ -133,21 +130,38 @@ class Decoder:
   def read_inst(cls, directives):
     generics = list()
     ports = list()
-    props = dict()
+    props = list()
     for key,val in directives.items():
-      if (res := cls.generic_key(key)) is not None:
-        name = res
+      if (name := cls.generic_key(key)) is not None:
         generics.append((name, val))
-      elif (res := cls.port_key(key)) is not None:
-        name = res
+      elif (name := cls.port_key(key)) is not None:
         ports.append((name, val))
-      elif (res := cls.prop_key(key)) is not None:
-        name = res
-        props[name] = val
+      elif (name := cls.prop_key(key)) is not None:
+        props.append((name, val))
       else:
         raise DFACCTOError('Invalid directive "{}"'.format(key))
     return (generics, ports, props)
 
+
+class ElementWrapper:
+  def __init__(self, frontend, element):
+    self._frontend = frontend
+    self._element = element
+
+  def __getattr__(self, key):
+    return getattr(self._element, key)
+
+  def __str__(self):
+    return str(self._element)
+
+  def __enter__(self):
+    self._frontend.enter_context(self._element)
+
+  def __exit__(self, type, value, trackback):
+    self._frontend.leave_context()
+
+  def unwrap(self):
+    return self._element
 
 
 class Frontend:
@@ -156,21 +170,20 @@ class Frontend:
     self._package = None
     self._entity = None
 
-  @contextmanager
-  def package_context(self, package):
-    self._package = package
-    try:
-      yield package
-    finally:
-      self._package = None
+  def enter_context(self, element):
+    DFACCTOAssert(self.in_global_context,
+      'Can not nest contexts')
+    if isinstance(element, Package):
+      self._package = element
+    elif isinstance(element, Entity):
+      self._entity = element
+    else:
+      raise DFACCTOError(
+        'Can not use {} as new context'.format(element))
 
-  @contextmanager
-  def entity_context(self, entity):
-    self._entity = entity
-    try:
-      yield entity
-    finally:
-      self._entity = None
+  def leave_context(self):
+    self._package = None
+    self._entity = None
 
   @property
   def in_global_context(self):
@@ -184,20 +197,25 @@ class Frontend:
   def in_entity_context(self):
     return self._entity is not None
 
-  def literal_reference(self, ref):
-    return LiteralValue(ref)
+  def _unpack_prop(self, value):
+    value = value() if callable(value) else value
+    value = value.unwrap() if isinstance(value, ElementWrapper) else value
+    return value
 
-  def literal_vector_reference(self, *refs):
-    return tuple(LiteralValue(ref) for ref in refs)
+  def literal_reference(self, ref, expand=None):
+    if expand is not None and isinstance(ref, str):
+      return LiteralValue(ref.format(expand))
+    else:
+      return LiteralValue(ref)
 
-  def global_statement(self, **directives):
-    DFACCTOAssert(self.in_global_context, 'Global statement must appear in the global context')
-    props = Decoder.read_props(directives)
-    self._context.props.update(props)
-    # TODO-lw deep update, so that multiple Gbl(x_templates={...}) extend templates dir!
+  def literal_vector_reference(self, *refs, expand=None):
+    if expand is not None:
+      return tuple(LiteralValue(ref, e) for e in expand for ref in refs)
+    else:
+      return tuple(LiteralValue(ref) for ref in refs)
 
-  def assignable_reference(self, ref):
-    name, pkg_name = Decoder.ref_value(ref)
+  def assignable_reference(self, ref, expand=None):
+    name, pkg_name = Decoder.ref_value(ref.format(expand) if expand is not None else ref)
     if self._entity is not None:
       assignable = self._entity.get_assignable(name, pkg_name)
     elif self._package is not None:
@@ -206,16 +224,42 @@ class Frontend:
       assignable = self._context.get_constant(name, pkg_name)
     return assignable
 
-  def assignable_vector_reference(self, *refs):
-    return tuple(self.assignable_reference(ref) for ref in refs)
+  def assignable_vector_reference(self, *refs, expand=None):
+    if expand is not None:
+      return tuple(self.assignable_reference(ref, e) for e in expand for ref in refs)
+    else:
+      return tuple(self.assignable_reference(ref) for ref in refs)
+
+  def connectable_reference(self, name, expand=None):
+    DFACCTOAssert(self.in_entity_context, 'Connectable reference must appear in an entity context')
+    name = Decoder.name_value(name.format(expand) if expand is not None else name)
+    return self._entity.get_connectable(name)
+
+  def connectable_vector_reference(self, *names, expand=None):
+    DFACCTOAssert(self.in_entity_context, 'Connectable reference must appear in an entity context')
+    if expand is not None:
+      return tuple(self.connectable_reference(name, e) for e in expand for name in names)
+    else:
+      return tuple(self.connectable_reference(name) for name in names)
+
+  def global_statement(self, **directives):
+    DFACCTOAssert(self.in_global_context, 'Global statement must appear in the global context')
+    props = Decoder.read_props(directives)
+
+    for name,value in props:
+      self._context.set_prop(name, self._unpack_prop(value))
+    # TODO-lw deep update, so that multiple Gbl(x_templates={...}) extend templates dir!
 
   def package_declaration(self, name, **directives):
     DFACCTOAssert(self.in_global_context, 'Package declaration must appear in the global context')
     name = Decoder.name_value(name)
     props = Decoder.read_props(directives)
 
-    package = Package(self._context, name, props)
-    return self.package_context(package)
+    package = self._context.add_or_get_package(name)
+    for name, value in props:
+      package.set_prop(name, self._unpack_prop(value))
+
+    return ElementWrapper(self, package)
 
   def type_declaration(self, name, simple=False, complex=False, **directives):
     DFACCTOAssert(self.in_package_context, 'Type declaration must appear in a package context')
@@ -223,7 +267,11 @@ class Frontend:
     is_complex = Decoder.type_role_value(simple, complex)
     props = Decoder.read_props(directives)
 
-    self._package.add_type(name, is_complex, props)
+    type = self._package.add_type(name, is_complex)
+    for name, value in props:
+      type.set_prop(name, self._unpack_prop(value))
+
+    return ElementWrapper(self, type)
 
   def constant_declaration(self, name, type, value=None, **directives):
     DFACCTOAssert(self.in_package_context, 'Constant declaration must appear in a package context')
@@ -233,35 +281,30 @@ class Frontend:
 
     type = self._package.get_type(type_name, pkg_name)
     size = size_name and self._package.get_constant(size_name, self._package.name)
-    self._package.add_constant(name, type, size, value, props)
+    constant = self._package.add_constant(name, type, size, value)
+    for name, value in props:
+      constant.set_prop(name, self._unpack_prop(value))
+
+    return ElementWrapper(self, constant)
 
   def entity_declaration(self, name, **directives):
     DFACCTOAssert(self.in_global_context, 'Entity declaration must appear in the global context')
     name = Decoder.name_value(name)
     generics, ports, props = Decoder.read_entity(directives)
 
-    entity = Entity(self._context, name, props)
-
+    entity = self._context.add_entity(name)
     for name, type_name, pkg_name, size_name in generics:
       type = self._context.get_type(type_name, pkg_name)
       size = size_name and entity.get_generic(size_name)
       entity.add_generic(name, type, size)
-
     for name, role, type_name, pkg_name, size_name in ports:
       type = self._context.get_type(type_name, pkg_name)
       size = size_name and entity.get_generic(size_name)
       entity.add_port(name, role, type, size)
+    for name, value in props:
+      entity.set_prop(name, self._unpack_prop(value))
 
-    return self.entity_context(entity)
-
-  def connectable_reference(self, name):
-    DFACCTOAssert(self.in_entity_context, 'Connectable reference must appear in an entity context')
-    name = Decoder.name_value(name)
-    return self._entity.get_connectable(name)
-
-  def connectable_vector_reference(self, *names):
-    DFACCTOAssert(self.in_entity_context, 'Connectable reference must appear in an entity context')
-    return tuple(self.connectable_reference(name) for name in names)
+    return ElementWrapper(self, entity)
 
   def instance_declaration(self, entity_name, name=None, index=None, **directives):
     DFACCTOAssert(self.in_entity_context, 'Instance declaration must appear in an entity context')
@@ -274,9 +317,13 @@ class Frontend:
     generics, ports, props = Decoder.read_inst(directives)
 
     entity = self._context.get_entity(entity_name)
-    instance = entity.instantiate(self._entity, inst_name, props)
+    instance = entity.instantiate(self._entity, inst_name)
     for name,value in generics:
       instance.assign(name, value)
     for name,to in ports:
       instance.connect(name, to)
+    for name, value in props:
+      instance.set_prop(name, self._unpack_prop(value))
+
+    return ElementWrapper(self, instance)
 

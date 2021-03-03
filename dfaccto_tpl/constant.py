@@ -5,12 +5,12 @@ from .role import Role
 
 
 class Constant(PackageElement, ValueContainer, Assignable):
-  def __init__(self, package, name, type, size_constant, value=None, *, props):
+  def __init__(self, package, name, type, size_constant, value=None):
     if size_constant is not None:
       size_constant.role_equals(Role.Const)
       size_constant.vector_equals(False)
 
-    PackageElement.__init__(self, package, name, 'c_{name}{dir}', props)
+    PackageElement.__init__(self, package, name, 'c_{name}{dir}')
     ValueContainer.__init__(self, Role.Const, type, size_constant is not None, size_constant and size_constant.raw_value, value)
     Assignable.__init__(self)
     self._size_constant = size_constant
