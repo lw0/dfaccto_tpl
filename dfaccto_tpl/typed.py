@@ -195,12 +195,12 @@ class Typed:
     return not isinstance(self._vector, DeferredValue)
 
   @property
-  def is_scalar(self):
-    return self._vector is False
-
-  @property
   def is_vector(self):
     return self._vector is True
+
+  @property
+  def is_scalar(self):
+    return self._vector is False
 
   @property
   def knows_size(self):
