@@ -1,11 +1,11 @@
 from pathlib import Path
 
-from .util import DFACCTOError
 from .template import parse, TemplateError
+from .util import DFACCTOError
+
 
 
 class ContextRenderer:
-
   def __init__(self, out_path):
     self._out_path = Path(out_path)
     self._templates = dict()

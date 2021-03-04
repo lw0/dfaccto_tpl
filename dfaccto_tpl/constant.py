@@ -1,18 +1,21 @@
-from .common import ValueContainer, Assignable
+from .assignable import ConstAssignable
+from .assignment import Assignment
 from .element import PackageElement
-from .util import DFACCTOAssert, safe_str
 from .role import Role
+from .util import safe_str
 
 
-class Constant(PackageElement, ValueContainer, Assignable):
+
+class Constant(PackageElement, Assignment, ConstAssignable):
   def __init__(self, package, name, type, size_constant, value=None):
     if size_constant is not None:
-      size_constant.role_equals(Role.Const)
+      # Constants used for size must be simple scalars
+      size_constant.role_equals(Role.Simple)
       size_constant.vector_equals(False)
 
     PackageElement.__init__(self, package, name, 'c_{name}{dir}')
-    ValueContainer.__init__(self, Role.Const, type, size_constant is not None, size_constant and size_constant.raw_value, value)
-    Assignable.__init__(self)
+    Assignment.__init__(self, ConstAssignable, Role.Const, type, size_constant is not None, size_constant and size_constant.raw_value, value)
+    ConstAssignable.__init__(self)
     self._size_constant = size_constant
 
     self.package.constants.register(self.name, self)
@@ -27,9 +30,9 @@ class Constant(PackageElement, ValueContainer, Assignable):
   def __str__(self):
     try:
       if self.is_vector:
-        return '({}).c_{}:{}({}):={}'.format(self.package, self.name, self.type, self.size_constant, self.value)
+        return '({}).c_{}:{}({}):={}'.format(self.package, self.name, self.type, self.size_constant, self.raw_value)
       else:
-        return '({}).c_{}:{}:={}'.format(self.package, self.name, self.type, self.value)
+        return '({}).c_{}:{}:={}'.format(self.package, self.name, self.type, self.raw_value)
     except:
       return safe_str(self)
 

@@ -1,9 +1,7 @@
-from copy import copy
-from enum import Enum
-
 from .element import PackageElement
-from .util import DFACCTOAssert, safe_str
 from .role import Role
+from .util import safe_str
+
 
 
 class Type(PackageElement):
@@ -24,7 +22,7 @@ class Type(PackageElement):
 
   def __str__(self):
     try:
-      return '({}).t{}_{}'.format(self.package, self._role.char, self.name)
+      return '({}).t_{}'.format(self.package, self.name)
     except:
       return safe_str(self)
 
@@ -41,7 +39,6 @@ class Type(PackageElement):
   @property
   def role(self):
     return self._role
-
 
   @property
   def knows_complex(self):

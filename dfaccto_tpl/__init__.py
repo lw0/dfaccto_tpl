@@ -1,15 +1,23 @@
-from .util import DFACCTOError, DFACCTOAssert, IndexWrapper, Registry # IndexedObj, ValueStore, safe_str
 from .context import Context
-from .constant import Constant
+from .element import Element, EntityElement, PackageElement
 from .package import Package
-from .entity import Entity#, Instance
-from .frontend import Frontend
-from .generic import Generic #, InstGeneric
-from .port import Port #, InstPort
-from .role import Role
-from .signal import Signal
+from .constant import Constant
 from .type import Type
-# from .common import Instantiable, Typed, ValueContainer, Connectable
-# from .element import Element, EntityElement, PackageElement
+from .entity import Entity, Instance
+from .generic import Generic, InstGeneric
+from .port import Port, InstPort
+from .signal import Signal
 
-__version__ = '0.108'
+from .role import Role
+from .hasprops import HasProps
+from .typed import Typed
+from .assignment import Assignment
+from .assignable import Assignable, ConstAssignable
+from .util import DFACCTOError, IndexWrapper, Registry, DeferredValue # safe_str, cached_property, IndexedObj, UnionFind
+
+from .configreader import ConfigReader
+from .contextrenderer import ContextRenderer
+from .frontend import Frontend # Decoder, ElementWrapper
+
+
+__version__ = '1.0'

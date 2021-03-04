@@ -3,6 +3,7 @@ from enum import IntFlag, auto
 from .util import DFACCTOError
 
 
+
 class Role(IntFlag):
   Unidir = auto()  # Simple Signal
   Input = auto()   # Simple Input Port   - in
@@ -22,38 +23,22 @@ class Role(IntFlag):
   @classmethod
   def parse(cls, string):
     Symbols = {
-      'i': cls.Input,
-      'o': cls.Output,
-      'U': cls.Unidir,
-      's': cls.Slave,
-      'm': cls.Master,
-      'v': cls.View,
-      'p': cls.Pass,
-      'B': cls.Bidir}
+      'i': Role.Input,
+      'o': Role.Output,
+      'U': Role.Unidir,
+      's': Role.Slave,
+      'm': Role.Master,
+      'v': Role.View,
+      'p': Role.Pass,
+      'B': Role.Bidir}
     val = Symbols.get(string)
     if val is not None:
       return val
     else:
       raise DFACCTOError('"{}" is not a role identifier'.format(string))
 
-  @property
-  def char(self):
-    Names = {
-      cls.Input:  'i',
-      cls.Output: 'o',
-      cls.Unidir: 'U',
-      cls.Slave:  's',
-      cls.Master: 'm',
-      cls.View:   'v',
-      cls.Pass:   'p',
-      cls.Bidir:  'B'}
-    return Names.get(self, '!')
-
   def equals(self, other):
     return (self & other != 0) and (self & ~other == 0)
-
-  def match(self, other):
-    return self & other != 0
 
   def refine(self, other):
     new = self & other

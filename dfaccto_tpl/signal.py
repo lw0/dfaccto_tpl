@@ -1,14 +1,16 @@
-from .util import safe_str
-from .role import Role
-from .common import Connectable, Typed
+from .assignable import Assignable
 from .element import EntityElement
+from .role import Role
+from .typed import Typed
+from .util import safe_str
 
 
-class Signal(EntityElement, Typed, Connectable):
+
+class Signal(EntityElement, Typed, Assignable):
   def __init__(self, entity, name, type=None, vector=None, size=None):
     EntityElement.__init__(self, entity, name, 's_{name}{dir}')
     Typed.__init__(self, Role.Signal, type, vector, size, on_type_set=self._register_identifiers)
-    Connectable.__init__(self)
+    Assignable.__init__(self)
 
     self.entity.signals.register(self.name, self)
     self.entity.connectables.register(self.name, self)

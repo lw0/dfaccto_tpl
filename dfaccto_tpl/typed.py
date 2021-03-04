@@ -1,43 +1,7 @@
-from collections import defaultdict
-import collections.abc as abc
-
-from .util import DFACCTOError, DFACCTOAssert, IndexedObj, ValueStore, IndexWrapper, DeferredValue
+from .assignable import ConstAssignable
 from .role import Role
-from .element import PackageElement, EntityElement
+from .util import DFACCTOError, DeferredValue
 
-
-
-class Instantiable:
-  def __init__(self, base=None):
-    self._base = base
-
-  @property
-  def base(self):
-    return self._base
-
-  @property
-  def is_instance(self):
-    return self._base is not None
-
-
-class Connectable:
-  def __init__(self, is_literal=False):
-    self._connections = defaultdict(list)
-    self._is_literal = is_literal
-
-  @property
-  def is_literal(self):
-    return self._is_literal
-
-  def connect_port(self, port_inst, idx=None):
-    DFACCTOAssert(port_inst.is_input or port_inst.is_view or len(self._connections[port_inst.role]) == 0,
-      'Connectable {} can not be connected to multiple ports of role {}'.format(self, port_inst.role.name))
-    self._connections[port_inst.role].append(IndexedObj(port_inst, idx, None))
-
-
-class Assignable(Connectable):
-  def __init__(self, is_literal=False):
-    Connectable.__init__(self, is_literal)
 
 
 class Typed:
@@ -59,19 +23,20 @@ class Typed:
         self.size_equals(other._size)
       else:
         self.vector_equals(True)
-        self.size_equals(LiteralValue(part_of))
+        self.size_equals(Literal(part_of))
         other.vector_equals(False)
     else:
       if part_of is None:
         self.vector_equals(False)
       else:
         self.vector_equals(True)
-        self.size_equals(LiteralValue(part_of))
+        self.size_equals(Literal(part_of))
 
   def role_equals(self, role):
     new_role = self._role.refine(role)
     if new_role is None:
-      raise DFACCTOError('Role "{}" of {} can not be refined with incompatible role "{}"'.format(self.role, self, role))
+      msg = 'Role {} of {} can not be refined with incompatible role "{}"'
+      raise DFACCTOError(msg.format(self.role.name, self, role.name))
     self._role = new_role
 
   def type_equals(self, type):
@@ -82,7 +47,8 @@ class Typed:
     elif isinstance(type, DeferredValue):
       type.assign(self._type)
     elif self._type != type:
-      raise DFACCTOError("Type of {} is already set and can not be changed to {}".format(self, type))
+      msg = 'Type of {} is already set and can not be changed to {}'
+      raise DFACCTOError(msg.format(self, type))
 
   def _resolve_type(self, type):
     self.role_equals(type.role)
@@ -100,7 +66,8 @@ class Typed:
     elif self._vector != vector:
       self_str = 'Vector' if self._vector else 'Scalar'
       other_str = 'vector' if vector else 'scalar'
-      raise DFACCTOError("{} is already a {} and can not be changed to a {}".format(self, self_str, other_str))
+      msg = '{} is already a {} and can not be changed to a {}'
+      raise DFACCTOError(msg.format(self, self_str, other_str))
 
   def _resolve_vector(self, vector):
     self._vector = vector
@@ -113,11 +80,11 @@ class Typed:
     elif isinstance(size, DeferredValue):
       size.assign(self._size)
     elif self._size != size:
-      raise DFACCTOError("Size of {} is already set and can not be changed to {}".format(self, size))
+      msg = 'Size of {} is already set and can not be changed to {}'
+      raise DFACCTOError(msg.format(self, size))
 
   def _resolve_size(self, size):
     self._size = size
-
 
   @property
   def has_role(self):
@@ -130,27 +97,35 @@ class Typed:
   @property
   def knows_specific(self):
     return self._role.knows_specific
+
   @property
   def is_input(self):
     return self._role.is_input
+
   @property
   def is_output(self):
     return self._role.is_output
+
   @property
   def is_unidir(self):
     return self._role.is_unidir
+
   @property
   def is_slave(self):
     return self._role.is_slave
+
   @property
   def is_master(self):
     return self._role.is_master
+
   @property
   def is_view(self):
     return self._role.is_view
+
   @property
   def is_pass(self):
     return self._role.is_pass
+
   @property
   def is_bidir(self):
     return self._role.is_bidir
@@ -158,9 +133,11 @@ class Typed:
   @property
   def knows_complex(self):
     return self._role.knows_complex
+
   @property
   def is_simple(self):
     return self._role.is_simple
+
   @property
   def is_complex(self):
     return self._role.is_complex
@@ -168,12 +145,15 @@ class Typed:
   @property
   def knows_entity(self):
     return self._role.knows_entity
+
   @property
   def is_port(self):
     return self._role.is_port
+
   @property
   def is_const(self):
     return self._role.is_const
+
   @property
   def is_signal(self):
     return self._role.is_signal
@@ -181,22 +161,26 @@ class Typed:
   @property
   def mode(self):
     return self._role.mode
+
   @property
   def mode_ms(self):
     return self._role.mode_ms
+
   @property
   def mode_sm(self):
     return self._role.mode_sm
+
   @property
   def cmode(self):
     return self._role.cmode
+
   @property
   def cmode_ms(self):
     return self._role.cmode_ms
+
   @property
   def cmode_sm(self):
     return self._role.cmode_sm
-
 
   @property
   def knows_type(self):
@@ -205,7 +189,6 @@ class Typed:
   @property
   def type(self):
     return self._type
-
 
   @property
   def knows_vector(self):
@@ -219,7 +202,6 @@ class Typed:
   def is_vector(self):
     return self._vector is True
 
-
   @property
   def knows_size(self):
     return not isinstance(self._size, DeferredValue)
@@ -229,73 +211,21 @@ class Typed:
     return self._size
 
 
-class LiteralValue(Typed, Assignable):
+class Literal(Typed, ConstAssignable):
   def __init__(self, value):
     Typed.__init__(self, Role.Const)
-    Assignable.__init__(self, is_literal=True)
+    ConstAssignable.__init__(self, is_literal=True)
     self._value = value
 
   def __str__(self):
     return str(self._value)
 
   def __eq__(self, other):
-    if isinstance(other, LiteralValue):
+    if isinstance(other, Literal):
       return self._value == other._value
     return False
 
   @property
   def value(self):
     return self._value
-
-
-class ValueContainer(Typed):
-  def __init__(self, role, type, vector, size, value=None):
-    Typed.__init__(self, role, type, vector, size)
-    self._value = DeferredValue(self._resolve_value)
-    self.value_equals(value)
-
-  @property
-  def knows_value(self):
-    return not isinstance(self._value, DeferredValue)
-
-  @property
-  def raw_value(self):
-    return self._value
-
-  @property
-  def value(self):
-    if not isinstance(self._value, (DeferredValue, abc.Sequence)):
-      return self._value
-    return None
-
-  @property
-  def values(self):
-    if isinstance(self._value, abc.Sequence):
-      return IndexWrapper(self._value)
-    return None
-
-  def value_equals(self, value):
-    if value is None:
-      return
-    if isinstance(self._value, DeferredValue):
-      self._value.assign(value)
-    elif isinstance(value, DeferredValue):
-      value.assign(self._value)
-    elif self._value != value:
-      raise DFACCTOError('Value of {} is already set and can not be changed to {}'.format(self, value))
-
-  def _resolve_value(self, value):
-    if isinstance(value, Assignable):
-      self.adapt(value)
-    elif isinstance(value, abc.Sequence):
-      DFACCTOAssert(all(isinstance(part, Assignable) for part in value),
-        'List assignment to {} must only contain assignable elements'.format(self))
-      vec = len(value)
-      for idx,part in enumerate(value):
-        self.adapt(part, part_of=vec)
-    else:
-      raise DFACCTOError(
-        'Assignment to {} must be an assignable element or list of such'.format(self))
-    self._value = value
-
 

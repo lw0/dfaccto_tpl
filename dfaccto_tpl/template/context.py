@@ -4,15 +4,20 @@ from .errors import AbsentError
 
 def _default_lookup(obj, field):
   try:
-    return obj[field]
-  except KeyError:
-    raise AbsentError('Could not find field "{}"'.format(field))
-  except TypeError:
-    # TODO-lw try obj[int(field)] ?
+    idx = int(field)
+    return obj[idx]
+  except IndexError:
+    raise AbsentError('Could not find index "{}"'.format(field))
+  except (TypeError, ValueError):
     try:
-      return getattr(obj, field)
-    except AttributeError:
-      raise AbsentError('Could not find field "{}"'.format(field))
+      return obj[field]
+    except KeyError:
+      raise AbsentError('Could not find key "{}"'.format(field))
+    except TypeError:
+      try:
+        return getattr(obj, field)
+      except AttributeError:
+        raise AbsentError('Could not find member "{}"'.format(field))
 
 
 class Context:

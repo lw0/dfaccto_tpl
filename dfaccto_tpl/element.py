@@ -1,56 +1,14 @@
+from .hasprops import HasProps
+from .util import cached_property
 
-
-class HasProps:
-  def __init__(self):
-    self._props = dict()
-
-  def __getattr__(self, key):
-    if key.startswith('x_') and key[2:] in self._props:
-      return self._props[key[2:]]
-    elif key.startswith('is_a_'):
-      name = key[5:].lower()
-      return any(name == cls.__name__.lower() for cls in type(self).mro())
-    else:
-      raise AttributeError(key)
-
-  def set_prop(self, key, value):
-    self._props[key] = value
-
-  # -> see Frontend.global_statement()
-  # def update_prop(self, key, value):
-  #   if key in self._props:
-  #     old = self._props[key]
-  #     try:
-  #       old.update(value)
-  #       return
-  #     except:
-  #       try:
-  #         old.extend(value)
-  #         return
-  #       except:
-  #         pass
-  #   self._props[key] = value
-
-  def clear_props(self):
-    self._props.clear()
-
-  @property
-  def props(self):
-    return self._props
 
 
 class Element(HasProps):
-  def __init__(self, context, name, identifier_pattern, has_vector=False):
+  def __init__(self, context, name, ident_fmt, has_vector=False):
     HasProps.__init__(self)
     self._context = context
     self._name = name
-    self._identifier_pattern = identifier_pattern
-    self._identifier = None
-    self._identifier_ms = None
-    self._identifier_sm = None
-    self._identifier_v = None
-    self._identifier_v_ms = None
-    self._identifier_v_sm = None
+    self._ident_fmt = ident_fmt
     self._has_vector = has_vector
 
   @property
@@ -61,79 +19,78 @@ class Element(HasProps):
   def name(self):
     return self._name
 
-  @property
+  @cached_property
   def identifier(self):
-    if self._identifier is None:
-      if self.has_role:
-        if self.role.knows_complex and self.role.is_simple:
-          self._identifier = self._identifier_pattern.format(name=self._name,
-                                                             mode=self.role.cmode or '',
-                                                             vec='', dir='')
-      else:
-        self._identifier = self._identifier_pattern.format(name=self._name,
-                                                           mode='',
-                                                           vec='', dir='')
-    return self._identifier
+    if self.has_role:
+      if self.role.knows_complex and self.role.is_simple:
+        return self._ident_fmt.format(name=self._name,
+                                      mode=self.role.cmode or '',
+                                      vec='', dir='')
+    else:
+      return self._ident_fmt.format(name=self._name,
+                                    mode='',
+                                    vec='', dir='')
 
-  @property
+  @cached_property
   def identifier_ms(self):
-    if self._identifier_ms is None:
-      if self.has_role and self.role.knows_complex and self.role.is_complex:
-        self._identifier_ms = self._identifier_pattern.format(name=self._name,
-                                                              mode=self.role.cmode_ms or '',
-                                                              vec='', dir='_ms')
-    return self._identifier_ms
+    if self.has_role and self.role.knows_complex and self.role.is_complex:
+      return self._ident_fmt.format(name=self._name,
+                                    mode=self.role.cmode_ms or '',
+                                    vec='', dir='_ms')
 
-  @property
+  @cached_property
   def identifier_sm(self):
-    if self._identifier_sm is None:
-      if self.has_role and self.role.knows_complex and self.role.is_complex:
-        self._identifier_sm = self._identifier_pattern.format(name=self._name,
-                                                              mode=self.role.cmode_sm or '',
-                                                              vec='', dir='_sm')
-    return self._identifier_sm
+    if self.has_role and self.role.knows_complex and self.role.is_complex:
+      return self._ident_fmt.format(name=self._name,
+                                    mode=self.role.cmode_sm or '',
+                                    vec='', dir='_sm')
 
-  @property
+  @cached_property
   def identifier_v(self):
-    if self._has_vector and self._identifier_v is None:
+    if self._has_vector:
       if self.has_role:
         if self.role.knows_complex and self.role.is_simple:
-          self._identifier_v = self._identifier_pattern.format(name=self._name,
-                                                               mode=self.role.cmode or '',
-                                                               vec='_v', dir='')
+          return self._ident_fmt.format(name=self._name,
+                                        mode=self.role.cmode or '',
+                                        vec='_v', dir='')
       else:
-        self._identifier_v = self._identifier_pattern.format(name=self._name,
-                                                             mode='',
-                                                             vec='_v', dir='')
-    return self._identifier_v
+        return self._ident_fmt.format(name=self._name,
+                                      mode='',
+                                      vec='_v', dir='')
 
-  @property
+  @cached_property
   def identifier_v_ms(self):
-    if self._has_vector and self._identifier_v_ms is None:
-      if self.has_role and self.role.knows_complex and self.role.is_complex:
-        self._identifier_v_ms = self._identifier_pattern.format(name=self._name,
-                                                                mode=self.role.cmode_ms or '',
-                                                                vec='_v', dir='_ms')
-    return self._identifier_v_ms
+    if self._has_vector and self.has_role and self.role.knows_complex and self.role.is_complex:
+      return self._ident_fmt.format(name=self._name,
+                                    mode=self.role.cmode_ms or '',
+                                    vec='_v', dir='_ms')
 
-  @property
+  @cached_property
   def identifier_v_sm(self):
-    if self._has_vector and self._identifier_v_sm is None:
-      if self.has_role and self.role.knows_complex and self.role.is_complex:
-        self._identifier_v_sm = self._identifier_pattern.format(name=self._name,
-                                                                mode=self.role.cmode_sm or '',
-                                                                vec='_v', dir='_sm')
-    return self._identifier_v_sm
+    if self._has_vector and self.has_role and self.role.knows_complex and self.role.is_complex:
+        return self._ident_fmt.format(name=self._name,
+                                      mode=self.role.cmode_sm or '',
+                                      vec='_v', dir='_sm')
 
 
 class EntityElement(Element):
-  def __init__(self, entity, name, identifier_pattern, has_vector=False):
-    Element.__init__(self, entity.context, name, identifier_pattern, has_vector)
+  def __init__(self, entity, name, ident_fmt, base=None, inst_type=None):
+    Element.__init__(self, entity.context, name, ident_fmt)
     self._entity = entity
+    self._base = base
+    self._inst_type = inst_type
 
   @property
   def entity(self):
     return self._entity
+
+  @property
+  def base(self):
+    return self._base
+
+  @property
+  def is_instance(self):
+    return self._base is not None
 
   @property
   def qualified(self):
@@ -159,68 +116,55 @@ class EntityElement(Element):
   def qualified_v_sm(self):
     return self.identifier_v_sm
 
+  def instantiate(self, inst_entity):
+    if self._inst_type is None:
+      raise DFACCTOError('Can not instantiate {}'.format(self))
+    return self._inst_type(self, inst_entity)
+
 
 class PackageElement(Element):
-  def __init__(self, package, name, identifier_pattern, has_vector=False):
-    Element.__init__(self, package.context, name, identifier_pattern, has_vector)
+  def __init__(self, package, name, ident_fmt, has_vector=False):
+    Element.__init__(self, package.context, name, ident_fmt, has_vector)
     self._package = package
-    self._qualified = None
-    self._qualified_ms = None
-    self._qualified_sm = None
-    self._qualified_v = None
-    self._qualified_v_ms = None
-    self._qualified_v_sm = None
 
   @property
   def package(self):
     return self._package
 
-  @property
+  @cached_property
   def qualified(self):
-    if self._qualified is None:
-      ident = self.identifier
-      if ident is not None:
-        self._qualified = '{}.{}'.format(self.package.identifier, ident)
-    return self._qualified
+    ident = self.identifier
+    if ident is not None:
+      return '{}.{}'.format(self.package.identifier, ident)
 
-  @property
+  @cached_property
   def qualified_ms(self):
-    if self._qualified_ms is None:
-      ident = self.identifier_ms
-      if ident is not None:
-        self._qualified_ms = '{}.{}'.format(self.package.identifier, ident)
-    return self._qualified_ms
+    ident = self.identifier_ms
+    if ident is not None:
+      return '{}.{}'.format(self.package.identifier, ident)
 
-  @property
+  @cached_property
   def qualified_sm(self):
-    if self._qualified_sm is None:
-      ident = self.identifier_sm
-      if ident is not None:
-        self._qualified_sm = '{}.{}'.format(self.package.identifier, ident)
-    return self._qualified_sm
+    ident = self.identifier_sm
+    if ident is not None:
+      return '{}.{}'.format(self.package.identifier, ident)
 
-  @property
+  @cached_property
   def qualified_v(self):
-    if self._qualified_v is None:
-      ident = self.identifier_v
-      if ident is not None:
-        self._qualified_v = '{}.{}'.format(self.package.identifier, ident)
-    return self._qualified_v
+    ident = self.identifier_v
+    if ident is not None:
+      return '{}.{}'.format(self.package.identifier, ident)
 
-  @property
+  @cached_property
   def qualified_v_ms(self):
-    if self._qualified_v_ms is None:
-      ident = self.identifier_v_ms
-      if ident is not None:
-        self._qualified_v_ms = '{}.{}'.format(self.package.identifier, ident)
-    return self._qualified_v_ms
+    ident = self.identifier_v_ms
+    if ident is not None:
+      return '{}.{}'.format(self.package.identifier, ident)
 
-  @property
+  @cached_property
   def qualified_v_sm(self):
-    if self._qualified_v_sm is None:
-      ident = self.identifier_v_sm
-      if ident is not None:
-        self._qualified_v_sm = '{}.{}'.format(self.package.identifier, ident)
-    return self._qualified_v_sm
+    ident = self.identifier_v_sm
+    if ident is not None:
+      return '{}.{}'.format(self.package.identifier, ident)
 
 

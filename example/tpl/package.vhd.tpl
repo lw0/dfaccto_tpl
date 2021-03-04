@@ -9,6 +9,13 @@ use work.{{identifier}};
 
 package {{identifier}} is
 
+-- second constant: {{constants.1}}
+-- type named "Logic": {{types.Logic}}
+-- Type List:
+{{#types}}
+--   {{_idx}} - {{.}}
+{{/types}}
+
 {{#declarations}}
 {{# is_a_type}}
   {{*x_definition}}

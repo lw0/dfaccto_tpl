@@ -1,12 +1,11 @@
-import collections.abc as abc
-from contextlib import contextmanager
 import re
 
-from .util import DFACCTOAssert, DFACCTOError
-from .common import LiteralValue
-from .role import Role
 from .entity import Entity
 from .package import Package
+from .role import Role
+from .typed import Literal
+from .util import DFACCTOError
+
 
 
 class Decoder:
@@ -25,7 +24,10 @@ class Decoder:
   @classmethod
   def port_role_key(cls, key):
     if m := cls.PortRolePattern.fullmatch(key):
-      return (m.group(2), Role.parse(m.group(1))) # name, role
+      role = Role.parse(m.group(1))
+      if not role.is_port:
+        raise DFACCTOError('Invalid port role "{}"'.format(role.name))
+      return (m.group(2), role) # name, role
     else:
       return None
 
@@ -57,13 +59,6 @@ class Decoder:
       return (m.group(2), m.group(1), m.group(3)) # type_name, pkg_name, size_name
     else:
       raise DFACCTOError('Invalid type declaration "{}"'.format(value))
-
-    # if isinstance(value, tuple) and len(value) == 2 and isinstance(value[0], str) and isinstance(value[1], str):
-    #   return (value[0], value[1]) # type_name, size_name
-    # elif isinstance(value, str):
-    #   return (value, None)
-    # else:
-    #   return None
 
   # '[<pkg_name>.]<name>'
   RefPattern = re.compile('(?:(\w+)\.)?(\w+)')
@@ -117,7 +112,6 @@ class Decoder:
         generics.append((name, type_name, pkg_name, size_name))
       elif (res := cls.port_role_key(key)) is not None:
         name, role = res
-        DFACCTOAssert(role.is_port, 'Invalid port role "{}"'.format(role.name))
         type_name, pkg_name, size_name = cls.type_value(val)
         ports.append((name, role, type_name, pkg_name, size_name))
       elif (name := cls.prop_key(key)) is not None:
@@ -171,15 +165,14 @@ class Frontend:
     self._entity = None
 
   def enter_context(self, element):
-    DFACCTOAssert(self.in_global_context,
-      'Can not nest contexts')
+    if not self.in_global_context:
+      raise DFACCTOError('Can not nest contexts')
     if isinstance(element, Package):
       self._package = element
     elif isinstance(element, Entity):
       self._entity = element
     else:
-      raise DFACCTOError(
-        'Can not use {} as new context'.format(element))
+      raise DFACCTOError('Can not use {} as new context'.format(element))
 
   def leave_context(self):
     self._package = None
@@ -204,15 +197,15 @@ class Frontend:
 
   def literal_reference(self, ref, expand=None):
     if expand is not None and isinstance(ref, str):
-      return LiteralValue(ref.format(expand))
+      return Literal(ref.format(expand))
     else:
-      return LiteralValue(ref)
+      return Literal(ref)
 
   def literal_vector_reference(self, *refs, expand=None):
     if expand is not None:
-      return tuple(LiteralValue(ref, e) for e in expand for ref in refs)
+      return tuple(Literal(ref, e) for e in expand for ref in refs)
     else:
-      return tuple(LiteralValue(ref) for ref in refs)
+      return tuple(Literal(ref) for ref in refs)
 
   def assignable_reference(self, ref, expand=None):
     name, pkg_name = Decoder.ref_value(ref.format(expand) if expand is not None else ref)
@@ -231,19 +224,22 @@ class Frontend:
       return tuple(self.assignable_reference(ref) for ref in refs)
 
   def connectable_reference(self, name, expand=None):
-    DFACCTOAssert(self.in_entity_context, 'Connectable reference must appear in an entity context')
+    if not self.in_entity_context:
+      raise DFACCTOError('Connectable reference must appear in an entity context')
     name = Decoder.name_value(name.format(expand) if expand is not None else name)
     return self._entity.get_connectable(name)
 
   def connectable_vector_reference(self, *names, expand=None):
-    DFACCTOAssert(self.in_entity_context, 'Connectable reference must appear in an entity context')
+    if not self.in_entity_context:
+      raise DFACCTOError('Connectable reference must appear in an entity context')
     if expand is not None:
       return tuple(self.connectable_reference(name, e) for e in expand for name in names)
     else:
       return tuple(self.connectable_reference(name) for name in names)
 
   def global_statement(self, **directives):
-    DFACCTOAssert(self.in_global_context, 'Global statement must appear in the global context')
+    if not self.in_global_context:
+      raise DFACCTOError('Global statement must appear in the global context')
     props = Decoder.read_props(directives)
 
     for name,value in props:
@@ -251,7 +247,8 @@ class Frontend:
     # TODO-lw deep update, so that multiple Gbl(x_templates={...}) extend templates dir!
 
   def package_declaration(self, name, **directives):
-    DFACCTOAssert(self.in_global_context, 'Package declaration must appear in the global context')
+    if not self.in_global_context:
+      raise DFACCTOError('Package declaration must appear in the global context')
     name = Decoder.name_value(name)
     props = Decoder.read_props(directives)
 
@@ -262,7 +259,8 @@ class Frontend:
     return ElementWrapper(self, package)
 
   def type_declaration(self, name, simple=False, complex=False, **directives):
-    DFACCTOAssert(self.in_package_context, 'Type declaration must appear in a package context')
+    if not self.in_package_context:
+      raise DFACCTOError('Type declaration must appear in a package context')
     name = Decoder.name_value(name)
     is_complex = Decoder.type_role_value(simple, complex)
     props = Decoder.read_props(directives)
@@ -274,7 +272,8 @@ class Frontend:
     return ElementWrapper(self, type)
 
   def constant_declaration(self, name, type, value=None, **directives):
-    DFACCTOAssert(self.in_package_context, 'Constant declaration must appear in a package context')
+    if not self.in_package_context:
+      raise DFACCTOError('Constant declaration must appear in a package context')
     name = Decoder.name_value(name)
     type_name, pkg_name, size_name = Decoder.type_value(type)
     props = Decoder.read_props(directives)
@@ -288,7 +287,8 @@ class Frontend:
     return ElementWrapper(self, constant)
 
   def entity_declaration(self, name, **directives):
-    DFACCTOAssert(self.in_global_context, 'Entity declaration must appear in the global context')
+    if not self.in_global_context:
+      raise DFACCTOError('Entity declaration must appear in the global context')
     name = Decoder.name_value(name)
     generics, ports, props = Decoder.read_entity(directives)
 
@@ -307,7 +307,8 @@ class Frontend:
     return ElementWrapper(self, entity)
 
   def instance_declaration(self, entity_name, name=None, index=None, **directives):
-    DFACCTOAssert(self.in_entity_context, 'Instance declaration must appear in an entity context')
+    if not self.in_entity_context:
+      raise DFACCTOError('Instance declaration must appear in an entity context')
     entity_name = Decoder.name_value(entity_name)
     if name is None:
       name = entity_name[0].lower() + entity_name[1:]
@@ -319,9 +320,9 @@ class Frontend:
     entity = self._context.get_entity(entity_name)
     instance = entity.instantiate(self._entity, inst_name)
     for name,value in generics:
-      instance.assign(name, value)
+      instance.assign_generic(name, value)
     for name,to in ports:
-      instance.connect(name, to)
+      instance.assign_port(name, to)
     for name, value in props:
       instance.set_prop(name, self._unpack_prop(value))
 

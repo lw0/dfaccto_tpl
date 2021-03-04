@@ -2,9 +2,10 @@ from pathlib import Path
 import sys
 import traceback
 
-from .util import DFACCTOError
 from .context import Context
 from .frontend import Frontend
+from .util import DFACCTOError
+
 
 
 class ConfigReader:

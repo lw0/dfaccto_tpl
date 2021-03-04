@@ -1,25 +1,29 @@
-from collections import OrderedDict
 import collections.abc as abc
 
 
 
 class DFACCTOError(Exception):
   def __init__(self, msg):
-    # breakpoint()
     self.msg = msg
-
-
-def DFACCTOAssert(condition, msg):
-  if not condition:
-    raise DFACCTOError(msg)
 
 
 def safe_str(obj):
   try:
-    return '{}({})'.format(type(obj).__name__,
-                           ' '.join('{}={}'.format(k,v) for k,v in vars(self).items()))
+    var_strs = ('{}={}'.format(k,v) for k,v in vars(obj).items())
+    return '{}({})'.format(type(obj).__name__, ' '.join(var_strs))
   except:
     return repr(obj)
+
+
+class cached_property:
+  def __init__(self, func):
+    self._func = func
+
+  def __get__(self, obj, cls):
+    value = self._func(obj)
+    if value is not None:
+      obj.__dict__[self._func.__name__] = value
+    return value
 
 
 class IndexedObj():
@@ -132,7 +136,6 @@ class Registry(abc.Iterable):
     return candidate
 
 
-
 class UnionFind:
   def __init__(self):
     self._root = list()
@@ -163,58 +166,11 @@ class UnionFind:
     del self._groups[root_b]
     return root_a
 
-  def dump(self):
-    print('UnionFind @{:d}'.format(self._idx))
-    for idx, root in self._root.items():
-      print(' {:d} -> {:d}'.format(idx, root))
-    for root, idx_set in self._groups.items():
-      print(' {:d}: {!s}'.format(root, idx_set))
-
-
-class ValueStore:
-
-  _registry = UnionFind()
-  _values = dict()
-
-  @classmethod
-  def _create(cls, val=None):
-    """Create a new independent value index and initialize with val if not None"""
-    idx = cls._registry.new()
-    if val is not None:
-      root = cls._registry.find(idx)
-      cls._values[root] = val
-    return idx
-
-  @classmethod
-  def _get_value(cls, idx):
-    """Get value for idx if already set or None otherwise """
-    root = cls._registry.find(idx)
-    return cls._values.get(root)
-
-  @classmethod
-  def _set_value(cls, idx, val):
-    """Set and possibly override value for idx unless val is None"""
-    root = cls._registry.find(idx)
-    if val is not None:
-      cls._values[root] = val
-
-  @classmethod
-  def _assign(cls, idx_a, idx_b):
-    """
-    Join idx_a and idx_b to refer to the same value.
-    If either is None the value of the other index is set for both.
-    If neither is None, idx_b gets receives the value of idx_a.
-    """
-    val_a = cls._get_value(idx_a)
-    val_b = cls._get_value(idx_b)
-    if val_a is None:
-      cls._registry.union(idx_b, idx_a)
-    else:
-      cls._registry.union(idx_a, idx_b)
 
 class DeferredValue:
   _registry = UnionFind()
   _callbacks = dict()
+  _values = dict()
 
   @classmethod
   def _create(cls, callback):
@@ -223,16 +179,36 @@ class DeferredValue:
     return idx
 
   @classmethod
-  def _assign(cls, idx_a, idx_b):
-    cls._registry.union(idx_a, idx_b)
-
-  @classmethod
-  def _resolve(cls, idx, value):
-    #TODO-lw track if already resolved
+  def _notify(cls, idx, value):
     for i in cls._registry.group(idx):
       callback = cls._callbacks.get(i)
       if callback:
         callback(value)
+
+  @classmethod
+  def _assign(cls, idx_a, idx_b):
+    root_a = cls._registry.find(idx_a)
+    root_b = cls._registry.find(idx_b)
+    if root_a in cls._values and root_b in cls._values:
+      raise ValueError('Can not assign already resolved values')
+    elif root_a in cls._values:
+      val_a = cls._values[root_a]
+      cls._notify(idx_b, val_a)
+      cls._registry.union(idx_a, idx_b)
+    elif root_b in cls._values:
+      val_b = cls._values[root_b]
+      cls._notify(idx_a, val_b)
+      cls._registry.union(idx_b, idx_a)
+    else:
+      cls._registry.union(idx_b, idx_a)
+
+  @classmethod
+  def _resolve(cls, idx, value):
+    root = cls._registry.find(idx)
+    if root in cls._values:
+      raise ValueError('Can not resolve already resolved value')
+    cls._notify(idx, value)
+    cls._values[root] = value
 
   def __init__(self, on_resolve):
     self._idx = self._create(on_resolve)

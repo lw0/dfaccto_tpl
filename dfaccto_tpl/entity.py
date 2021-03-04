@@ -1,67 +1,16 @@
-from .util import Registry, IndexWrapper, safe_str
-from .signal import Signal
-from .port import Port
-from .generic import Generic
-from .common import Instantiable
+from itertools import chain
+
 from .element import Element, PackageElement
+from .generic import Generic
+from .port import Port
+from .signal import Signal
+from .util import Registry, IndexWrapper, safe_str
 
 
 
-class Instance(Instantiable, Element):
-  def __init__(self, entity, parent, name):
-    Element.__init__(self, entity.context, name, 'i_{name}')
-    Instantiable.__init__(self, entity)
-    # EntityCommon.__init__(self)
-    self._parent = parent
-    self._ports = Registry()
-    self._generics = Registry()
-    self._identifiers = Registry()
-
-    for generic in entity.generics.contents():
-      generic.instantiate(self)
-    for port in entity.ports.contents():
-      port.instantiate(self)
-
-    self._parent.instances.register(self.name, self)
-    self._parent.identifiers.register(self.identifier, self)
-
-  def __str__(self):
-    try:
-      return '({}).i_{}:{}'.format(self.parent, self.name, self.base)
-    except:
-      return safe_str(self)
-
-  @property
-  def parent(self):
-    return self._parent
-
-  @property
-  def has_role(self):
-    return False
-
-  @property
-  def generics(self):
-    return self._generics
-
-  @property
-  def ports(self):
-    return self._ports
-
-  @property
-  def identifiers(self):
-    return self._identifiers
-
-  def assign(self, generic_name, value):
-    self.generics.lookup(generic_name).value_equals(value)
-
-  def connect(self, port_name, to):
-    self.ports.lookup(port_name).connect(to)
-
-
-class Entity(Instantiable, Element):
+class Entity(Element):
   def __init__(self, context, name):
     Element.__init__(self, context, name, '{name}')
-    Instantiable.__init__(self)
     self._ports = Registry()
     self._generics = Registry()
     self._instances = Registry()
@@ -81,6 +30,14 @@ class Entity(Instantiable, Element):
   @property
   def has_role(self):
     return False
+
+  @property
+  def is_instance(self):
+    return False
+
+  @property
+  def base(self):
+    return None
 
   @property
   def generics(self):
@@ -108,7 +65,6 @@ class Entity(Instantiable, Element):
 
   @property
   def used_packages(self):
-    # TODO-lw this looks unnecessarily verbose
     packages = set()
     for conn in self._connectables.contents():
       packages.add(conn.type.package)
@@ -119,27 +75,26 @@ class Entity(Instantiable, Element):
       for prop in inst.props.values():
         if isinstance(prop, PackageElement):
           packages.add(prop.package)
-      for generic in inst.generics.contents():
-        packages.add(generic.type.package)
-        if isinstance(generic.size, PackageElement):
-          packages.add(generic.size.package)
-        if isinstance(generic.value, PackageElement):
-          packages.add(generic.value.package)
-        if generic.values:
-          for part in generic.values:
-            if isinstance(part, PackageElement):
-              packages.add(part.package)
-      for port in inst.ports.contents():
-        packages.add(port.type.package)
-        if isinstance(port.size, PackageElement):
-          packages.add(port.size.package)
-        if isinstance(port.connection, PackageElement):
-          packages.add(port.connection.package)
-        if port.connections:
-          for part in port.connections:
+      for assignment in chain(inst.generics.contents(), inst.ports.contents()):
+        packages.add(assignment.type.package)
+        if isinstance(assignment.size, PackageElement):
+          packages.add(assignment.size.package)
+        if isinstance(assignment.assignment, PackageElement):
+          packages.add(assignment.assignment.package)
+        if assignment.assignments:
+          for part in assignment.assignments:
             if isinstance(part, PackageElement):
               packages.add(part.package)
     return IndexWrapper(packages)
+
+  def add_generic(self, name, type, size_generic):
+    return Generic(self, name, type, size_generic)
+
+  def add_port(self, name, role, type, size_generic):
+    return Port(self, name, role, type, size_generic)
+
+  def instantiate(self, parent, name):
+    return Instance(self, parent, name)
 
   def get_generic(self, name):
     if self.generics.has(name):
@@ -159,13 +114,62 @@ class Entity(Instantiable, Element):
       return self.connectables.lookup(name)
     return Signal(self, name)
 
-  def add_generic(self, name, type, size_generic):
-    return Generic(self, name, type, size_generic)
 
-  def add_port(self, name, role, type, size_generic):
-    return Port(self, name, role, type, size_generic)
+class Instance(Element):
+  def __init__(self, entity, parent, name):
+    Element.__init__(self, entity.context, name, 'i_{name}')
+    self._base = entity
+    self._parent = parent
+    self._ports = Registry()
+    self._generics = Registry()
+    self._identifiers = Registry()
 
-  def instantiate(self, parent, name):
-    return Instance(self, parent, name)
+    for generic in entity.generics.contents():
+      generic.instantiate(self)
+    for port in entity.ports.contents():
+      port.instantiate(self)
+
+    self._parent.instances.register(self.name, self)
+    self._parent.identifiers.register(self.identifier, self)
+
+  def __str__(self):
+    try:
+      return '({}).i_{}:{}'.format(self.parent, self.name, self.base)
+    except:
+      return safe_str(self)
+
+  @property
+  def has_role(self):
+    return False
+
+  @property
+  def is_instance(self):
+    return True
+
+  @property
+  def base(self):
+    return self._base
+
+  @property
+  def parent(self):
+    return self._parent
+
+  @property
+  def generics(self):
+    return self._generics
+
+  @property
+  def ports(self):
+    return self._ports
+
+  @property
+  def identifiers(self):
+    return self._identifiers
+
+  def assign_generic(self, name, value):
+    self.generics.lookup(name).assign(value)
+
+  def assign_port(self, name, to):
+    self.ports.lookup(name).assign(to)
 
 

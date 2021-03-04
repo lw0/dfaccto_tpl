@@ -1,7 +1,8 @@
-from .util import Registry, safe_str, IndexWrapper
+from .constant import Constant
 from .element import Element, PackageElement
 from .type import Type
-from .constant import Constant
+from .util import Registry, safe_str, IndexWrapper
+
 
 
 class Package(Element):
@@ -54,31 +55,31 @@ class Package(Element):
         packages.add(decl.type.package)
         if isinstance(decl.size, PackageElement):
           packages.add(decl.size.package)
-        if isinstance(decl.value, PackageElement):
-          packages.add(decl.value.package)
-        if decl.values:
-          for part in decl.values:
+        if isinstance(decl.assignment, PackageElement):
+          packages.add(decl.assignment.package)
+        if decl.assignments:
+          for part in decl.assignments:
             if isinstance(part, PackageElement):
               packages.add(part.package)
     packages.remove(self)
     return IndexWrapper(packages)
-
-  def get_type(self, type_name, pkg_name=None):
-    if pkg_name is None and self.types.has(type_name):
-      return self.types.lookup(type_name)
-    else:
-      return self.context.get_type(type_name, pkg_name)
-
-  def get_constant(self, const_name, pkg_name=None):
-    if pkg_name is None and self.constants.has(const_name):
-      return self.constants.lookup(const_name)
-    else:
-      return self.context.get_constant(const_name, pkg_name)
 
   def add_type(self, name, is_complex):
     return Type(self, name, is_complex)
 
   def add_constant(self, name, type, size, value):
     return Constant(self, name, type, size, value)
+
+  def get_type(self, name, pkg_name=None):
+    if pkg_name is None and self.types.has(name):
+      return self.types.lookup(name)
+    else:
+      return self.context.get_type(name, pkg_name)
+
+  def get_constant(self, name, pkg_name=None):
+    if pkg_name is None and self.constants.has(name):
+      return self.constants.lookup(name)
+    else:
+      return self.context.get_constant(name, pkg_name)
 
 
