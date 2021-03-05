@@ -163,6 +163,24 @@ class Frontend:
     self._context = context
     self._package = None
     self._entity = None
+    self._namespace = {
+      'Lit':       self.literal,
+      'LitVec':    self.literal_vector,
+      'RefTyp':    self.type_reference,
+      'RefCon':    self.assignable_reference,
+      'RefConVec': self.assignable_vector_reference,
+      'RefSig':    self.connectable_reference,
+      'RefSigVec': self.connectable_vector_reference,
+      'Gbl':       self.global_statement,
+      'Pkg':       self.package_declaration,
+      'Typ':       self.type_declaration,
+      'Con':       self.constant_declaration,
+      'Ent':       self.entity_declaration,
+      'Ins':       self.instance_declaration}
+
+  @property
+  def namespace(self):
+    return self._namespace
 
   def enter_context(self, element):
     if not self.in_global_context:
@@ -195,17 +213,25 @@ class Frontend:
     value = value.unwrap() if isinstance(value, ElementWrapper) else value
     return value
 
-  def literal_reference(self, ref, expand=None):
+  def literal(self, ref, expand=None):
     if expand is not None and isinstance(ref, str):
       return Literal(ref.format(expand))
     else:
       return Literal(ref)
 
-  def literal_vector_reference(self, *refs, expand=None):
+  def literal_vector(self, *refs, expand=None):
     if expand is not None:
       return tuple(Literal(ref, e) for e in expand for ref in refs)
     else:
       return tuple(Literal(ref) for ref in refs)
+
+  def type_reference(self, ref, expand=None):
+    name, pkg_name = Decoder.ref_value(ref.format(expand) if expand is not None else ref)
+    if self._package is not None:
+      type = self._package.get_type(name, pkg_name)
+    else:
+      type = self._context.get_type(name, pkg_name)
+    return type
 
   def assignable_reference(self, ref, expand=None):
     name, pkg_name = Decoder.ref_value(ref.format(expand) if expand is not None else ref)

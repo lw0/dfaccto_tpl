@@ -34,34 +34,34 @@ with Ent('Toplevel',
 
   Ins('Inner', name='mid',
       g_Pattern=LitVec(1,2,5),
-        p_hsIn=To('hsIntFirst'),
-        p_hsOut=To('hsIntMid'),
-        p_dataIn=To('dataIntFirst'),
-        p_dataOut=To('dataIntMid'),
-        p_dummy=Ref('Dummy'),
-        p_done=To('doneMid'))
+        p_hsIn=RefSig('hsIntFirst'),
+        p_hsOut=RefSig('hsIntMid'),
+        p_dataIn=RefSig('dataIntFirst'),
+        p_dataOut=RefSig('dataIntMid'),
+        p_dummy=RefCon('Dummy'),
+        p_done=RefSig('doneMid'))
 
   Ins('Inner', name='first',
       g_Pattern=LitVec(2,3),
-        p_hsIn=To('hsIn'),
-        p_hsOut=To('hsIntFirst'),
-        p_dataIn=To('dataIn'),
-        p_dataOut=To('dataIntFirst'),
-        p_dummy=Ref('LogicNull'),
-        p_done=To('doneFirst'))
+        p_hsIn=RefSig('hsIn'),
+        p_hsOut=RefSig('hsIntFirst'),
+        p_dataIn=RefSig('dataIn'),
+        p_dataOut=RefSig('dataIntFirst'),
+        p_dummy=RefCon('LogicNull'),
+        p_done=RefSig('doneFirst'))
 
   Ins('Inner', name='last',
       g_Pattern=LitVec(1,2,4,8),
-        p_hsIn=To('hsIntMid'),
-        p_hsOut=To('hsOut'),
-        p_dataIn=To('dataIntMid'),
-        p_dataOut=To('dataOut'),
+        p_hsIn=RefSig('hsIntMid'),
+        p_hsOut=RefSig('hsOut'),
+        p_dataIn=RefSig('dataIntMid'),
+        p_dataOut=RefSig('dataOut'),
         p_dummy=Lit(False),
-        p_done=To('doneLast'))
+        p_done=RefSig('doneLast'))
 
   Ins('Barrier',
-      g_Dummy=Ref('LogicNull'),
-      g_Mask=Ref('Mask'),
-        p_doneIn=ToVec('doneFirst', 'doneMid', 'doneLast'),
-        p_done=To('done'))
+      g_Dummy=RefCon('LogicNull'),
+      g_Mask=RefCon('Mask'),
+        p_doneIn=RefSigVec('doneFirst', 'doneMid', 'doneLast'),
+        p_done=RefSig('done'))
 

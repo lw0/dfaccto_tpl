@@ -12,20 +12,8 @@ class ConfigReader:
   def __init__(self, context=None):
     self._context = context or Context()
     self._frontend = Frontend(self._context)
-    self._globals = {
-      'Inc':    self.read,
-      'Lit':    self._frontend.literal_reference,
-      'LitVec': self._frontend.literal_vector_reference,
-      'Ref':    self._frontend.assignable_reference,
-      'RefVec': self._frontend.assignable_vector_reference,
-      'To':     self._frontend.connectable_reference,
-      'ToVec':  self._frontend.connectable_vector_reference,
-      'Gbl':    self._frontend.global_statement,
-      'Pkg':    self._frontend.package_declaration,
-      'Typ':    self._frontend.type_declaration,
-      'Con':    self._frontend.constant_declaration,
-      'Ent':    self._frontend.entity_declaration,
-      'Ins':    self._frontend.instance_declaration}
+    self._globals = {'Inc': self.read}
+    self._globals.update(self._frontend.namespace)
     self._executed = set()
     self._base_path = list()
 

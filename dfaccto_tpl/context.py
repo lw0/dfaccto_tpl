@@ -74,10 +74,10 @@ class Context(HasProps):
           else:
             constant = pkg.constants.lookup(name)
       if constant is None:
-        raise DFACCTOError('Unqualified constant reference "{}" can not be found in any package'.format(type_name))
+        raise DFACCTOError('Unqualified constant reference "{}" can not be found in any package'.format(name))
     else:
       pkg = self._packages.lookup(pkg_name)
-      constant = pkg.constants.lookup(type_name)
+      constant = pkg.constants.lookup(name)
     return constant
 
 
