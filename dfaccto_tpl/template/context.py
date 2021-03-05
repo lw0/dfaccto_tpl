@@ -99,31 +99,31 @@ class Context:
         return None
 
   def _get_value(self, key):
+    value = self._get_first(key)
+    for field in key.rest:
+      value = self._lookup(value, field)
+    return value
+
+  def _get_first(self, key):
+    end = -key.top if key.top > 0 else None
+    start = -key.top - 1 if key.anchored else None
+
+    slice = self._stack[start:end]
+    if not slice:
+      raise AbsentError('Not enough stack levels to start at {}'.format(key.top))
     if not key.first:
-      return self._top(key.skip)
+      return slice[-1]
     else:
-      value = self._search(key.first, key.skip, key.anchored)
-      for part in key.rest:
-        value = self._lookup(value, part)
-      return value
-
-  def _top(self, skip):
-    if len(self._stack) <= skip:
-      raise AbsentError('Not enough stack items to skip {}'.format(skip))
-    return self._stack[-skip - 1]
-
-  def _search(self, field, skip, anchored):
-    context_items = self._stack[-1:] if anchored else reversed(self._stack)
-    to_skip = skip
-    for item in context_items:
-      try:
-        val = self._lookup(item, field)
-        if to_skip > 0:
-          to_skip -= 1
-        else:
-          return val
-      except AbsentError:
-        pass
-    raise AbsentError('Could not find {} in context stack after skipping {}'.format(field, skip - to_skip))
+      to_skip = key.skip
+      for item in reversed(slice):
+        try:
+          val = self._lookup(item, key.first)
+          if to_skip > 0:
+            to_skip -= 1
+          else:
+            return val
+        except AbsentError:
+          pass
+      raise AbsentError('Could not find {} in context stack after skipping {}'.format(key.first, key.skip - to_skip))
 
 

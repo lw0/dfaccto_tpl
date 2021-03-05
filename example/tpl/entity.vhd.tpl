@@ -12,10 +12,10 @@ entity {{identifier}} is
   generic (
 {{# generics}}
 {{#  is_complex}}
-    {{identifier_ms}} : {{#is_scalar}}{{type.qualified_ms}}{{|is_scalar}}{{type.qualified_v_ms}} (0 to {{=size}}{{>part/put_value.part}}{{/size}}-1){{/is_scalar}}{{?_last}}){{/_last}};
-    {{identifier_sm}} : {{#is_scalar}}{{type.qualified_sm}}{{|is_scalar}}{{type.qualified_v_sm}} (0 to {{=size}}{{>part/put_value.part}}{{/size}}-1){{/is_scalar}}{{?_last}}){{/_last}};
+    {{identifier_ms}} : {{#is_scalar}}{{type.qualified_ms}}{{|is_scalar}}{{type.qualified_v_ms}} (0 to {{=size}}{{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{/size}}-1){{/is_scalar}}{{?_last}}){{/_last}};
+    {{identifier_sm}} : {{#is_scalar}}{{type.qualified_sm}}{{|is_scalar}}{{type.qualified_v_sm}} (0 to {{=size}}{{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{/size}}-1){{/is_scalar}}{{?_last}}){{/_last}};
 {{|  is_complex}}
-    {{identifier}} : {{#is_scalar}}{{type.qualified}}{{|is_scalar}}{{type.qualified_v}} (0 to {{=size}}{{>part/put_value.part}}{{/size}}-1){{/is_scalar}}{{?_last}}){{/_last}};
+    {{identifier}} : {{#is_scalar}}{{type.qualified}}{{|is_scalar}}{{type.qualified_v}} (0 to {{=size}}{{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{/size}}-1){{/is_scalar}}{{?_last}}){{/_last}};
 {{/  is_complex}}
 {{/ generics}}
 {{/generics}}
@@ -24,10 +24,10 @@ entity {{identifier}} is
     pi_rst_n : in std_logic{{^ports}}){{/ports}};
 {{#ports}}
 {{# is_complex}}
-    {{identifier_ms}} : {{mode_ms}} {{#is_scalar}}{{type.qualified_ms}}{{|is_scalar}}{{type.qualified_v_ms}} (0 to {{=size}}{{>part/put_value.part}}{{/size}}-1){{/is_scalar}};
-    {{identifier_sm}} : {{mode_sm}} {{#is_scalar}}{{type.qualified_sm}}{{|is_scalar}}{{type.qualified_v_sm}} (0 to {{=size}}{{>part/put_value.part}}{{/size}}-1){{/is_scalar}}{{?_last}}){{/_last}};
+    {{identifier_ms}} : {{mode_ms}} {{#is_scalar}}{{type.qualified_ms}}{{|is_scalar}}{{type.qualified_v_ms}} (0 to {{=size}}{{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{/size}}-1){{/is_scalar}};
+    {{identifier_sm}} : {{mode_sm}} {{#is_scalar}}{{type.qualified_sm}}{{|is_scalar}}{{type.qualified_v_sm}} (0 to {{=size}}{{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{/size}}-1){{/is_scalar}}{{?_last}}){{/_last}};
 {{| is_complex}}
-    {{identifier}} : {{mode}} {{#is_scalar}}{{type.qualified}}{{|is_scalar}}{{type.qualified_v}} (0 to {{=size}}{{>part/put_value.part}}{{/size}}-1){{/is_scalar}}{{?_last}}){{/_last}};
+    {{identifier}} : {{mode}} {{#is_scalar}}{{type.qualified}}{{|is_scalar}}{{type.qualified_v}} (0 to {{=size}}{{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{/size}}-1){{/is_scalar}}{{?_last}}){{/_last}};
 {{/ is_complex}}
 {{/ports}}
 end {{identifier}};
@@ -37,10 +37,10 @@ architecture Structure of {{identifier}} is
 
 {{#signals}}
 {{# is_complex}}
-  signal {{identifier_ms}} : {{#is_vector}}{{type.qualified_v_ms}} (0 to {{=size}}{{>part/put_value.part}}{{/size}}-1){{|is_vector}}{{type.qualified_ms}}{{/is_vector}};
-  signal {{identifier_sm}} : {{#is_vector}}{{type.qualified_v_sm}} (0 to {{=size}}{{>part/put_value.part}}{{/size}}-1){{|is_vector}}{{type.qualified_ms}}{{/is_vector}};
+  signal {{identifier_ms}} : {{#is_vector}}{{type.qualified_v_ms}} (0 to {{=size}}{{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{/size}}-1){{|is_vector}}{{type.qualified_ms}}{{/is_vector}};
+  signal {{identifier_sm}} : {{#is_vector}}{{type.qualified_v_sm}} (0 to {{=size}}{{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{/size}}-1){{|is_vector}}{{type.qualified_ms}}{{/is_vector}};
 {{| is_complex}}
-  signal {{identifier}} : {{#is_vector}}{{type.qualified_v}} (0 to {{=size}}{{>part/put_value.part}}{{/size}}-1){{|is_vector}}{{type.qualified}}{{/is_vector}};
+  signal {{identifier}} : {{#is_vector}}{{type.qualified_v}} (0 to {{=size}}{{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{/size}}-1){{|is_vector}}{{type.qualified}}{{/is_vector}};
 {{/ is_complex}}
 {{/signals}}
 
@@ -52,46 +52,29 @@ begin
     generic map (
 {{#  generics}}
 {{?   is_assigned}}
-{{#    assignments}}
-{{?     is_literal}}
-{{?      is_complex}}
-      {{identifier_ms}}({{_idx}}) => {{*type.x_format_ms}},
-      {{identifier_sm}}({{_idx}}) => {{*type.x_formst_sm}}{{?_last}}{{?'_last}}){{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
-{{|      is_complex}}
-      {{identifier}}({{_idx}}) => {{*type.x_format}}{{?_last}}{{?'_last}}){{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
-{{/      is_complex}}
-{{|     is_literal}}
-{{?      is_complex}}
-      {{'identifier_ms}}({{_idx}}) => {{qualified_ms}},
-      {{'identifier_sm}}({{_idx}}) => {{qualified_sm}}{{?_last}}{{?'_last}}){{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
-{{|      is_complex}}
-      {{'identifier}}({{_idx}}) => {{qualified}}{{?_last}}{{?'_last}}){{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
-{{/      is_complex}}
-{{/     is_literal}}
-{{/    assignments}}
-{{#    assignment}}
-{{?     is_literal}}
-{{?      is_complex}}
-      {{identifier_ms}} => {{*type.x_format_ms}},
-      {{identifier_sm}} => {{*type.x_formst_sm}}{{?_last}}){{|_last}},{{/_last}}
-{{|      is_complex}}
-      {{identifier}} => {{*type.x_format}}{{?_last}}){{|_last}},{{/_last}}
-{{/      is_complex}}
-{{|     is_literal}}
-{{?      is_complex}}
-      {{'identifier_ms}} => {{qualified_ms}},
-      {{'identifier_sm}} => {{qualified_sm}}{{?_last}}){{|_last}},{{/_last}}
-{{|      is_complex}}
-      {{'identifier}} => {{qualified}}{{?_last}}){{|_last}},{{/_last}}
-{{/      is_complex}}
-{{/     is_literal}}
-{{/    assignment}}
+{{?    is_complex}}
+{{#     assignments}}
+      {{..identifier_ms}}({{._idx}}) => {{?is_literal}}{{=value}}{{*type.x_format_ms}}{{/value}}{{|is_literal}}{{qualified_ms}}{{/is_literal}},
+      {{..identifier_sm}}({{._idx}}) => {{?is_literal}}{{=value}}{{*type.x_format_sm}}{{/value}}{{|is_literal}}{{qualified_sm}}{{/is_literal}}{{?.._last}}{{?._last}}){{|._last}},{{/._last}}{{|.._last}},{{/.._last}}
+{{/     assignments}}
+{{#     assignment}}
+      {{..identifier_ms}} => {{?is_literal}}{{=value}}{{*type.x_format_ms}}{{/value}}{{|is_literal}}{{qualified_ms}}{{/is_literal}},
+      {{..identifier_sm}} => {{?is_literal}}{{=value}}{{*type.x_format_sm}}{{/value}}{{|is_literal}}{{qualified_sm}}{{/is_literal}}{{?.._last}}){{|.._last}},{{/.._last}}
+{{/     assignment}}
+{{|    is_complex}}
+{{#     assignments}}
+      {{..identifier}}({{._idx}}) => {{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{?.._last}}{{?._last}}){{|._last}},{{/._last}}{{|.._last}},{{/.._last}}
+{{/     assignments}}
+{{#     assignment}}
+      {{..identifier}} => {{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{?.._last}}){{|.._last}},{{/.._last}}
+{{/     assignment}}
+{{/    is_complex}}
 {{|   is_assigned}}
 {{?    is_complex}}
       {{identifier_ms}} => open,
-      {{identifier_sm}} => open{{?_last}}){{|_last}},{{/_last}}
+      {{identifier_sm}} => open{{?._last}}){{|._last}},{{/._last}}
 {{|    is_complex}}
-      {{identifier}} => open{{?_last}}){{|_last}},{{/_last}}
+      {{identifier}} => open{{?._last}}){{|._last}},{{/._last}}
 {{/    is_complex}}
 {{/   is_assigned}}
 {{/  generics}}
@@ -101,46 +84,29 @@ begin
       pi_rst_n => pi_rst_n{{?ports}},{{|ports}});{{/ports}}
 {{# ports}}
 {{?  is_assigned}}
-{{#   assignments}}
-{{?    is_literal}}
-{{#     is_complex}}
-      {{identifier_ms}}({{_idx}}) => {{*type.x_format_ms}},
-      {{identifier_sm}}({{_idx}}) => {{*type.x_format_sm}}{{?_last}}{{?'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
-{{|     is_complex}}
-       {{identifier}}({{_idx}}) => {{*type.x_format}}{{?_last}}{{?'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
-{{/     is_complex}}
-{{|    is_literal}}
-{{#     is_complex}}
-      {{'identifier_ms}}({{_idx}}) => {{qualified_ms}},
-      {{'identifier_sm}}({{_idx}}) => {{qualified_sm}}{{?_last}}{{?'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
-{{|     is_complex}}
-      {{'identifier}}({{_idx}}) => {{qualified}}{{?_last}}{{?'_last}});{{|'_last}},{{/'_last}}{{|_last}},{{/_last}}
-{{/     is_complex}}
-{{/    is_literal}}
-{{/   assignments}}
-{{#   assignment}}
-{{?    is_literal}}
-{{#     is_complex}}
-      {{identifier_ms}} => {{*type.x_format_ms}},
-      {{identifier_sm}} => {{*type.x_format_sm}}{{?_last}});{{|_last}},{{/_last}}
-{{|     is_complex}}
-      {{identifier}} => {{*type.x_format}}{{?_last}});{{|_last}},{{/_last}}
-{{/     is_complex}}
-{{|    is_literal}}
-{{#     is_complex}}
-      {{'identifier_ms}} => {{qualified_ms}},
-      {{'identifier_sm}} => {{qualified_sm}}{{?_last}});{{|_last}},{{/_last}}
-{{|     is_complex}}
-      {{'identifier}} => {{qualified}}{{?_last}});{{|_last}},{{/_last}}
-{{/     is_complex}}
-{{/    is_literal}}
-{{/   assignment}}
+{{?   is_complex}}
+{{#    assignments}}
+      {{..identifier_ms}}({{._idx}}) => {{?is_literal}}{{=value}}{{*type.x_format_ms}}{{/value}}{{|is_literal}}{{qualified_ms}}{{/is_literal}},
+      {{..identifier_sm}}({{._idx}}) => {{?is_literal}}{{=value}}{{*type.x_format_sm}}{{/value}}{{|is_literal}}{{qualified_sm}}{{/is_literal}}{{?.._last}}{{?._last}});{{|._last}},{{/._last}}{{|.._last}},{{/.._last}}
+{{/    assignments}}
+{{#    assignment}}
+      {{..identifier_ms}} => {{?is_literal}}{{=value}}{{*type.x_format_ms}}{{/value}}{{|is_literal}}{{qualified_ms}}{{/is_literal}},
+      {{..identifier_sm}} => {{?is_literal}}{{=value}}{{*type.x_format_sm}}{{/value}}{{|is_literal}}{{qualified_sm}}{{/is_literal}}{{?.._last}});{{|.._last}},{{/.._last}}
+{{/    assignment}}
+{{|   is_complex}}
+{{#    assignments}}
+      {{..identifier}}({{._idx}}) => {{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{?.._last}}{{?._last}});{{|._last}},{{/._last}}{{|.._last}},{{/.._last}}
+{{/    assignments}}
+{{#    assignment}}
+      {{..identifier}} => {{?is_literal}}{{=value}}{{*type.x_format}}{{/value}}{{|is_literal}}{{qualified}}{{/is_literal}}{{?.._last}});{{|.._last}},{{/.._last}}
+{{/    assignment}}
+{{/   is_complex}}
 {{|  is_assigned}}
 {{?   is_complex}}
       {{identifier_ms}} => open,
-      {{identifier_sm}} => open{{?_last}});{{|_last}},{{/_last}}
+      {{identifier_sm}} => open{{?._last}});{{|._last}},{{/._last}}
 {{|   is_complex}}
-      {{identifier}} => open{{?_last}});{{|_last}},{{/_last}}
+      {{identifier}} => open{{?._last}});{{|._last}},{{/._last}}
 {{/   is_complex}}
 {{/  is_assigned}}
 {{/ ports}}
