@@ -18,12 +18,13 @@ class Template:
     context = Context(*context_items, **context_kwargs)
     buf = RenderBuffer(no_indent=no_indent)
     self.render_with(context, buf)
-    return buf.get()
+    return buf.finish()
 
   def render_to(self, stream, *context_items, no_indent=False, **context_kwargs):
     context = Context(*context_items, **context_kwargs)
     buf = RenderBuffer(stream, no_indent=no_indent)
     self.render_with(context, buf)
+    buf.finish()
 
 
 class LiteralToken:
@@ -50,9 +51,9 @@ class ValueToken:
 
   def render_with(self, context, buf):
     string = context.get_string(self._key, self._verbatim)
-    buf.pushIndent()
+    buf.push_indent()
     buf.write(string)
-    buf.popIndent()
+    buf.pop_indent()
 
 
 class IndirectToken:
@@ -64,9 +65,9 @@ class IndirectToken:
   def render_with(self, context, buf):
     template_string = context.get_string(self._key, True)
     template = self._parser.parse(template_string)
-    buf.pushIndent()
+    buf.push_indent()
     template.render_with(context, buf)
-    buf.popIndent()
+    buf.pop_indent()
 
 
 class PartialToken:
@@ -77,9 +78,10 @@ class PartialToken:
   def render_with(self, context, buf):
     template = context.get_partial(self._name)
     if template is not None:
-      buf.pushIndent()
+      buf.push_indent()
       template.render_with(context, buf)
-      buf.popIndent()
+      buf.remove_trailing()
+      buf.pop_indent()
 
 
 class SectionToken:

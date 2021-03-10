@@ -26,8 +26,14 @@ class RenderBuffer:
   def spacify(cls, string):
     return cls._NS.sub(' ', string)
 
+  _TNL = re.compile(r'(?:\n|\r\n?)$')
+  @classmethod
+  def without_trailing(cls, string):
+    return cls._TNL.sub('', string)
+
   def __init__(self, stream=None, no_indent=False):
     self._buffer = stream or StringIO(newline='')
+    self._pre_buffer = None
     self._in_memory = stream is None
     self._no_indent = no_indent
     self._indent_stack = []
@@ -41,33 +47,44 @@ class RenderBuffer:
     else:
       return ''
 
+  def _write_indent(self):
+    for line, has_newline, last_newline, last_partline in self.split(self._pre_buffer):
+      self._buffer.write(line)
+      if has_newline:
+        self._buffer.write(self._indent)
+      if last_newline:
+        self._current_line.clear()
+        self._current_line.append(self._indent)
+      if last_partline:
+        self._current_line.append(line)
+
+  def _write_plain(self):
+    self._buffer.write(self._pre_buffer)
+
   def write(self, string):
-    if self._no_indent:
-      self._buffer.write(string)
-    else:
-      for line, has_newline, last_newline, last_partline in self.split(string):
-        self._buffer.write(line)
-        if has_newline:
-          self._buffer.write(self._indent)
+    if self._pre_buffer is not None:
+      if self._no_indent:
+        self._write_plain()
+      else:
+        self._write_indent()
+    self._pre_buffer = string
 
-        if last_newline:
-          self._current_line.clear()
-          self._current_line.append(self._indent)
-        if last_partline:
-          self._current_line.append(line)
+  def remove_trailing(self):
+    if self._pre_buffer is not None:
+      self._pre_buffer = self.without_trailing(self._pre_buffer)
 
-  def pushIndent(self):
+  def push_indent(self):
+    self.write(None) # flush _pre_buffer
     if not self._no_indent:
       self._indent_stack.append(self.spacify(''.join(self._current_line)))
 
-  def popIndent(self):
+  def pop_indent(self):
     if not self._no_indent:
       self._indent_stack.pop()
 
-  def get(self):
+  def finish(self):
+    self.write(None) # flush _pre_buffer
     if self._in_memory:
       return self._buffer.getvalue()
-    else:
-      return None
 
 

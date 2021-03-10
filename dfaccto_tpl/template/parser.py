@@ -271,7 +271,7 @@ class Parser:
                                           quant='?' if '' in self._types else '')
     self._token_pattern = re.compile(r'({type})\s*(\S+)\s*'.format(type=type_pat))
     self._space_pattern = re.compile(r'[ \t]+')
-    self._trailnl_pattern = re.compile(r'{nl}$'.format(nl=newline))
+    # self._trailnl_pattern = re.compile(r'{nl}$'.format(nl=newline))
 
   def _decode_token(self, string):
     """
@@ -384,7 +384,7 @@ class Parser:
     while queue:
       yield queue.popleft()
 
-  def _parse(self, string, eat_trailing=False):
+  def _parse(self, string):
     """
       Parse a template string into a token list ready for rendering
 
@@ -424,19 +424,14 @@ class Parser:
             sections.append_token(token)
         else:
           sections.append_literal(content)
-      tokens = sections.take()
-      if eat_trailing and tokens:
-        last = tokens[-1]
-        if isinstance(last, LiteralToken):
-          last.set_string(self._trailnl_pattern.sub('', last.string))
-      return tokens
+      return sections.take()
     except ParserError as e:
       e.set_position(last_pos[0], last_pos[1])
       raise e
 
-  def parse(self, string, name=None, eat_trailing=False):
+  def parse(self, string, name=None):
     try:
-      return Template(self._parse(string, eat_trailing), name)
+      return Template(self._parse(string), name)
     except ParserError as e:
       e.set_source(name)
       raise e

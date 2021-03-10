@@ -16,7 +16,7 @@ class ContextRenderer:
     tpl_string = tpl_path.read_text()
     try:
       if is_partial:
-        self._partials[tpl_name] = parse(tpl_string, tpl_name, eat_trailing=True)
+        self._partials[tpl_name] = parse(tpl_string, tpl_name)
       else:
         self._templates[tpl_name] = parse(tpl_string, tpl_name)
     except TemplateError as e:
