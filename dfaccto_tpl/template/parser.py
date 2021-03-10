@@ -259,8 +259,10 @@ class State(Enum):
 class Parser:
 
   def __init__(self, start_delim='{{', end_delim='}}'):
-    split_pat = r'(\r|\r?\n)|{start}((?:(?!{stop}).)*){stop}'.format(start=re.escape(start_delim),
-                                                                     stop=re.escape(end_delim))
+    newline = r'\n|\r\n?'
+    split_pat = r'({nl})|{start}((?:(?!{stop}).)*){stop}'.format(nl=newline,
+                                                                 start=re.escape(start_delim),
+                                                                 stop=re.escape(end_delim))
     self._split_pattern = re.compile(split_pat)
     self._types = ('', '&', '*', '#', '=', '?', '!', '|', '^', '/', '>')
     self._key_types = ('', '&', '*', '#', '=', '?', '!', '|', '^', '/')
@@ -269,10 +271,7 @@ class Parser:
                                           quant='?' if '' in self._types else '')
     self._token_pattern = re.compile(r'({type})\s*(\S+)\s*'.format(type=type_pat))
     self._space_pattern = re.compile(r'[ \t]+')
-    self._nospace_pattern = re.compile(r'[^ \t]')
-
-  def _spacify(self, string):
-    return self._nospace_pattern.sub(' ', string)
+    self._trailnl_pattern = re.compile(r'{nl}$'.format(nl=newline))
 
   def _decode_token(self, string):
     """
@@ -342,10 +341,10 @@ class Parser:
 
   def _filter(self, iterator):
     """
-      Filter a raw item stream to decode standalone tokens and indent.
+      Filter a raw item stream to decode standalone tokens.
 
         (is_token, is_newline, is_space, content, (line, col))
-        -> (is_token, content, (line, col), indent)
+        -> (is_token, content, (line, col))
 
       The transformation is performed using a finite state machine (see State)
       which tracks item patterns at the beginning of a line and
@@ -353,25 +352,13 @@ class Parser:
       Items are gathered in a queue for later modification,
       i.e. discarding whitespace around standalone tokens.
       This queue is flushed with each newline item.
-
-      The first token in every line also gets an indent attribute,
-      which is a spacified (see Parser._spacify()) version
-      of the preceeding literal string.
     """
     state = State.Begin
     queue = deque()
     for is_token, is_newline, is_space, content, position in iterator:
       if is_token:
-        # decode and append token
-        indent = None
-        if state is State.Begin:
-          indent = ''
-        elif state is State.Space:
-          indent = queue[-1][1] # <last item>.content
-        elif state is State.Print:
-          indent = self._spacify(queue[-1][1]) # <last item>.content
-        # (is_token, content, position, indent)
-        queue.append((True, content, position, indent))
+        # (is_token, content, position)
+        queue.append((True, content, position))
       elif is_newline:
         # flush queue
         if state.is_standalone:
@@ -381,23 +368,23 @@ class Parser:
           if state.discard_after:
             queue.popleft()
           # queue should be empty now
-          yield (True, token[1], token[2], token[3])
+          yield (True, token[1], token[2])
           # discard this newline item for standalone tokens
         else:
           while queue:
             yield queue.popleft()
           # pass this newline item for inline content
-          yield (False, content, position, None)
+          yield (False, content, position)
       else:
         # append literal
-        # (is_token, content, position, indent)
-        queue.append((False, content, position, None))
+        # (is_token, content, position)
+        queue.append((False, content, position))
       can_standalone = is_token and content[0] in self._standalone_types
       state = state.next(is_token, is_newline, is_space, can_standalone)
     while queue:
       yield queue.popleft()
 
-  def _parse(self, string):
+  def _parse(self, string, eat_trailing=False):
     """
       Parse a template string into a token list ready for rendering
 
@@ -407,18 +394,18 @@ class Parser:
     sections = SectionStack()
     last_pos = (1,1)
     try:
-      for is_token, content, pos, indent in self._filter(self._split(string)):
+      for is_token, content, pos in self._filter(self._split(string)):
         last_pos = pos
         if is_token:
           kind,param = content
           if kind == '':
-            sections.append_token(ValueToken(param, indent))
+            sections.append_token(ValueToken(param))
           elif kind == '&':
-            sections.append_token(ValueToken(param, indent, verbatim=True))
+            sections.append_token(ValueToken(param, verbatim=True))
           elif kind == '*':
-            sections.append_token(IndirectToken(param, indent, self))
+            sections.append_token(IndirectToken(param, self))
           elif kind == '>':
-            sections.append_token(PartialToken(param, indent))
+            sections.append_token(PartialToken(param))
           elif kind == '#':
             sections.push_normal(param, pos)
           elif kind == '=':
@@ -437,14 +424,19 @@ class Parser:
             sections.append_token(token)
         else:
           sections.append_literal(content)
-      return sections.take()
+      tokens = sections.take()
+      if eat_trailing and tokens:
+        last = tokens[-1]
+        if isinstance(last, LiteralToken):
+          last.set_string(self._trailnl_pattern.sub('', last.string))
+      return tokens
     except ParserError as e:
       e.set_position(last_pos[0], last_pos[1])
       raise e
 
-  def parse(self, string, name=None):
+  def parse(self, string, name=None, eat_trailing=False):
     try:
-      return Template(self._parse(string), name)
+      return Template(self._parse(string, eat_trailing), name)
     except ParserError as e:
       e.set_source(name)
       raise e
