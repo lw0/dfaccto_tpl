@@ -167,9 +167,13 @@ class Instance(Element):
     return self._identifiers
 
   def assign_generic(self, name, value):
-    self.generics.lookup(name).assign(value)
+    inst_generic = self.generics.lookup(name)
+    inst_generic.assign(value)
+    return inst_generic
 
   def assign_port(self, name, to):
-    self.ports.lookup(name).assign(to)
+    inst_port = self.ports.lookup(name)
+    inst_port.assign(to)
+    return inst_port
 
 

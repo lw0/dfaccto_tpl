@@ -2,66 +2,67 @@ Inc('simple_types.py')
 
 
 Ent('Inner',
-    g_DataWidth='Size',
-    g_PatternLength='Size',
-    g_Pattern='Integer(PatternLength)',
-      ps_hsIn='simple.Handshake', pm_hsOut='simple.Handshake',
-      pi_dataIn='simple.Data(DataWidth)',
-      po_dataOut='simple.Data(DataWidth)',
-      pi_dummy='Logic',
-      po_done='simple.Logic')
+    Generic('DataWidth',     T('Size')),
+    Generic('PatternLength', T('Size')),
+    Generic('Pattern',       T('Integer'), vector='PatternLength'),
+    PortS('hsIn',    T('Handshake', pkg='simple')),
+    PortM('hsOut',   T('Handshake', pkg='simple')),
+    PortI('dataIn',  T('Data', pkg='simple'), vector='DataWidth'),
+    PortO('dataOut', T('Data', pkg='simple'), vector='DataWidth'),
+    PortI('dummy',   T('Logic')),
+    PortO('done',    T('Logic')))
 
 Ent('Barrier',
-    g_Dummy='Logic',
-    g_PortCount='Size',
-    g_MaskCount='Size',
-    g_Mask='Integer(MaskCount)',
-      pi_doneIn='Logic(PortCount)',
-      po_done='Logic')
-
+    Generic('Dummy',     T('Logic')),
+    Generic('PortCount', T('Size')),
+    Generic('MaskCount', T('Size')),
+    Generic('Mask',      T('Integer'), vector='MaskCount'),
+    PortI('doneIn', T('Logic'), vector='PortCount'),
+    PortO('done',   T('Logic'),
+          x_depends=lambda e: e.ports['doneIn']))
 
 with Ent('Toplevel',
-         g_DataWidth='Size',
-         g_MaskCount='Size',
-         g_Mask='Integer(MaskCount)',
-         g_Dummy='Logic',
-           ps_hsIn='Handshake',
-           pm_hsOut='Handshake',
-           pi_dataIn='Data(DataWidth)',
-           po_dataOut='Data(DataWidth)',
-           po_done='Logic',
+         Generic('DataWidth', T('Size')),
+         Generic('MaskCount', T('Size')),
+         Generic('Mask',      T('Integer'), vector='MaskCount'),
+         Generic('Dummy',     T('Logic'), x_useless=True),
+         PortS('hsIn',    T('Handshake')),
+         PortM('hsOut',   T('Handshake')),
+         PortI('dataIn',  T('Data'), vector='DataWidth'),
+         PortO('dataOut', T('Data'), vector='DataWidth'),
+         PortO('done',    T('Logic')),
          x_templates={'entity.vhd': 'Toplevel.vhd'}):
 
-  Ins('Inner', name='mid',
-      g_Pattern=LitVec(1,2,5),
-        p_hsIn=RefSig('hsIntFirst'),
-        p_hsOut=RefSig('hsIntMid'),
-        p_dataIn=RefSig('dataIntFirst'),
-        p_dataOut=RefSig('dataIntMid'),
-        p_dummy=RefCon('Dummy'),
-        p_done=RefSig('doneMid'))
+  Ins('Inner', 'mid',
+      MapGeneric('Pattern', LitV(1, 2, 5)),
+      MapPort('hsIn',    S('hsIntFirst')),
+      MapPort('hsOut',   S('hsIntMid')),
+      MapPort('dataIn',  S('dataIntFirst')),
+      MapPort('dataOut', S('dataIntMid')),
+      MapPort('dummy',   G('Dummy')),
+      MapPort('done',    S('doneMid')))
 
-  Ins('Inner', name='first',
-      g_Pattern=LitVec(2,3),
-        p_hsIn=RefSig('hsIn'),
-        p_hsOut=RefSig('hsIntFirst'),
-        p_dataIn=RefSig('dataIn'),
-        p_dataOut=RefSig('dataIntFirst'),
-        p_dummy=RefCon('LogicNull'),
-        p_done=RefSig('doneFirst'))
+  Ins('Inner', 'first',
+      MapGeneric('Pattern', LitV(2,3)),
+      MapPort('hsIn',    S('hsIn')),
+      MapPort('hsOut',   S('hsIntFirst')),
+      MapPort('dataIn',  S('dataIn')),
+      MapPort('dataOut', S('dataIntFirst')),
+      MapPort('dummy',   C('LogicNull')),
+      MapPort('done',    S('doneFirst')))
 
-  Ins('Inner', name='last',
-      g_Pattern=LitVec(1,2,4,8),
-        p_hsIn=RefSig('hsIntMid'),
-        p_hsOut=RefSig('hsOut'),
-        p_dataIn=RefSig('dataIntMid'),
-        p_dataOut=RefSig('dataOut'),
-        p_dummy=Lit(False),
-        p_done=RefSig('doneLast'))
+  Ins('Inner', 'last',
+      MapGeneric('Pattern', LitV(1,2,4,8)),
+      MapPort('hsIn',    S('hsIntMid')),
+      MapPort('hsOut',   S('hsOut')),
+      MapPort('dataIn',  S('dataIntMid')),
+      MapPort('dataOut', S('dataOut')),
+      MapPort('dummy',   Lit(False)),
+      MapPort('done',    S('doneLast')))
 
-  Ins('Barrier',
-      g_Dummy=RefCon('LogicNull'),
-      g_Mask=RefCon('Mask'),
-        p_doneIn=RefSigVec('doneFirst', 'doneMid', 'doneLast'),
-        p_done=RefSig('done'))
+  Ins('Barrier', None,
+      MapGeneric('Dummy', C('LogicNull')),
+      MapGeneric('Mask',  G('Mask')),
+      MapPort('doneIn', SV('doneFirst', 'doneMid', 'doneLast')),
+      MapPort('done',   S('done')))
 

@@ -34,10 +34,14 @@ class Context(HasProps):
     self._entities.clear()
     self._identifiers.clear()
 
-  def add_or_get_package(self, name):
+  def add_package(self, name):
+    return Package(self, name)
+
+  def get_package(self, name):
     if self._packages.has(name):
       return self._packages.lookup(name)
-    return Package(self, name)
+    else:
+      raise DFACCTOError('Package reference "{}" can not be found'.format(name))
 
   def add_entity(self, name):
     return Entity(self, name)

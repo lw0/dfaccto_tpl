@@ -212,8 +212,8 @@ class Typed:
 
 
 class Literal(Typed, ConstAssignable):
-  def __init__(self, value):
-    Typed.__init__(self, Role.Const)
+  def __init__(self, value, type=None):
+    Typed.__init__(self, Role.Const, type)
     ConstAssignable.__init__(self, is_literal=True)
     self._value = value
 
