@@ -11,6 +11,20 @@ class HasProps:
     elif key.startswith('is_a_'):
       name = key[5:].lower()
       return any(name == cls.__name__.lower() for cls in type(self).mro())
+    elif key.startswith('P_') and hasattr(self, 'packages'):
+      return self.packages[key[2:]]
+    elif key.startswith('c_') and hasattr(self, 'constants'):
+      return self.constants[key[2:]]
+    elif key.startswith('t_') and hasattr(self, 'types'):
+      return self.types[key[2:]]
+    elif key.startswith('E_') and hasattr(self, 'entities'):
+      return self.entities[key[2:]]
+    elif key.startswith('g_') and hasattr(self, 'generics'):
+      return self.generics[key[2:]]
+    elif key.startswith('p_') and hasattr(self, 'ports'):
+      return self.ports[key[2:]]
+    elif key.startswith('i_') and hasattr(self, 'instances'):
+      return self.instances[key[2:]]
     else:
       raise AttributeError(key)
 
