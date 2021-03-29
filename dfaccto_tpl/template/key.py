@@ -139,4 +139,7 @@ class Key:
   def __eq__(self, other):
     return self._top == other._top and self._mode == other._mode and self._path == other._path
 
+  def __hash__(self):
+    return hash((self._top, self._mode, self._path))
+
 

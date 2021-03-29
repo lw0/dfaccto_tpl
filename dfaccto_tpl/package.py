@@ -1,7 +1,7 @@
 from .constant import Constant
 from .element import Element, PackageElement
 from .type import Type
-from .util import Registry, safe_str, IndexWrapper
+from .util import Registry, safe_str, IndexWrapper, visit_usage_deps
 
 
 
@@ -45,24 +45,16 @@ class Package(Element):
     return self._identifiers
 
   @property
-  def used_packages(self):
-    packages = set()
-    for decl in self._declarations.contents():
-      for prop in decl.props:
-        if isinstance(prop, PackageElement):
-          packages.add(prop.package)
-      if isinstance(decl, Constant):
-        packages.add(decl.type.package)
-        if isinstance(decl.size, PackageElement):
-          packages.add(decl.size.package)
-        if isinstance(decl.assignment, PackageElement):
-          packages.add(decl.assignment.package)
-        if decl.assignments:
-          for part in decl.assignments:
-            if isinstance(part, PackageElement):
-              packages.add(part.package)
-    packages.remove(self)
-    return IndexWrapper(packages)
+  def dependencies(self):
+    deps = set()
+    self.usage_deps(deps, set())
+    return IndexWrapper(deps)
+
+  def usage_deps(self, deps, visited):
+    self.prop_deps(deps, visited)
+    for element in self._identifiers.contents():
+      visit_usage_deps(deps, visited, element)
+    deps.remove(self)
 
   def add_type(self, name, is_complex):
     return Type(self, name, is_complex)

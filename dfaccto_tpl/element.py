@@ -121,6 +121,10 @@ class EntityElement(Element):
       raise DFACCTOError('Can not instantiate {}'.format(self))
     return self._inst_type(self, inst_entity)
 
+  def usage_deps(self, deps, visited):
+    self.prop_deps(deps, visited)
+
+
 
 class PackageElement(Element):
   def __init__(self, package, name, ident_fmt, has_vector=False):
@@ -166,5 +170,9 @@ class PackageElement(Element):
     ident = self.identifier_v_sm
     if ident is not None:
       return '{}.{}'.format(self.package.identifier, ident)
+
+  def usage_deps(self, deps, visited):
+    self.prop_deps(deps, visited)
+    deps.add(self.package)
 
 

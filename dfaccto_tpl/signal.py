@@ -39,3 +39,8 @@ class Signal(EntityElement, Typed, Assignable):
     except:
       return safe_str(self)
 
+  def usage_deps(self, deps, visited):
+    EntityElement.usage_deps(self, deps, visited)
+    Typed.usage_deps(self, deps, visited)
+
+

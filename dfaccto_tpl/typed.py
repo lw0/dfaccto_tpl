@@ -1,6 +1,6 @@
 from .assignable import ConstAssignable
 from .role import Role
-from .util import DFACCTOError, DeferredValue
+from .util import DFACCTOError, DeferredValue, visit_usage_deps
 
 
 
@@ -210,6 +210,13 @@ class Typed:
   def size(self):
     return self._size
 
+  def usage_deps(self, deps, visited):
+    if self.knows_type:
+      visit_usage_deps(deps, visited, self.type)
+    if self.knows_size:
+      visit_usage_deps(deps, visited, self.size)
+
+
 
 class Literal(Typed, ConstAssignable):
   def __init__(self, value, type=None):
@@ -225,7 +232,15 @@ class Literal(Typed, ConstAssignable):
       return self._value == other._value
     return False
 
+  def __hash__(self):
+    return id(self)
+
   @property
   def value(self):
     return self._value
+
+  def usage_deps(self, deps, visited):
+    Typed.usage_deps(self, deps, visited)
+    visit_usage_deps(deps, visited, self._value)
+
 

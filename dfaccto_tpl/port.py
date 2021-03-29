@@ -35,6 +35,10 @@ class Port(EntityElement, Typed, Assignable):
     except:
       return safe_str(self)
 
+  def usage_deps(self, deps, visited):
+    EntityElement.usage_deps(self, deps, visited)
+    Typed.usage_deps(self, deps, visited)
+
 
 class InstPort(EntityElement, Assignment):
   def __init__(self, port, inst_entity):
@@ -66,4 +70,7 @@ class InstPort(EntityElement, Assignment):
     except AttributeError:
       return safe_str(self)
 
+  def usage_deps(self, deps, visited):
+    EntityElement.usage_deps(self, deps, visited)
+    Assignment.usage_deps(self, deps, visited)
 

@@ -4,7 +4,7 @@ from .element import Element, PackageElement
 from .generic import Generic
 from .port import Port
 from .signal import Signal
-from .util import Registry, IndexWrapper, safe_str
+from .util import Registry, IndexWrapper, safe_str, visit_usage_deps
 
 
 
@@ -64,28 +64,15 @@ class Entity(Element):
     return self._identifiers
 
   @property
-  def used_packages(self):
-    packages = set()
-    for conn in self._connectables.contents():
-      packages.add(conn.type.package)
-    for prop in self.props.values():
-      if isinstance(prop, PackageElement):
-        packages.add(prop.package)
-    for inst in self._instances.contents():
-      for prop in inst.props.values():
-        if isinstance(prop, PackageElement):
-          packages.add(prop.package)
-      for assignment in chain(inst.generics.contents(), inst.ports.contents()):
-        packages.add(assignment.type.package)
-        if isinstance(assignment.size, PackageElement):
-          packages.add(assignment.size.package)
-        if isinstance(assignment.assignment, PackageElement):
-          packages.add(assignment.assignment.package)
-        if assignment.assignments:
-          for part in assignment.assignments:
-            if isinstance(part, PackageElement):
-              packages.add(part.package)
-    return IndexWrapper(packages)
+  def dependencies(self):
+    deps = set()
+    self.usage_deps(deps, set())
+    return IndexWrapper(deps)
+
+  def usage_deps(self, deps, visited):
+    self.prop_deps(deps, visited)
+    for element in self._identifiers.contents():
+      visit_usage_deps(deps, visited, element)
 
   def add_generic(self, name, type, size_generic):
     return Generic(self, name, type, size_generic)
@@ -175,5 +162,10 @@ class Instance(Element):
     inst_port = self.ports.lookup(name)
     inst_port.assign(to)
     return inst_port
+
+  def usage_deps(self, deps, visited):
+    self.prop_deps(deps, visited)
+    for element in self._identifiers.contents():
+      visit_usage_deps(deps, visited, element)
 
 

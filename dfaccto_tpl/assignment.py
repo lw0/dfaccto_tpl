@@ -1,7 +1,7 @@
 import collections.abc as abc
 
 from .typed import Typed
-from .util import DFACCTOError, IndexWrapper, DeferredValue
+from .util import DFACCTOError, IndexWrapper, DeferredValue, visit_usage_deps
 
 
 
@@ -60,4 +60,11 @@ class Assignment(Typed):
       raise DFACCTOError(msg.format(self))
     self._value = value
 
+  def usage_deps(self, deps, visited):
+    Typed.usage_deps(self, deps, visited)
+    if (assignments := self.assignments) is not None:
+      for value in assignments:
+        visit_usage_deps(deps, visited, value)
+    elif (value := self.assignment) is not None:
+      visit_usage_deps(deps, visited, value)
 

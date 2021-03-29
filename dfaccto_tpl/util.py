@@ -220,3 +220,8 @@ class DeferredValue:
       self._resolve(self._idx, other)
 
 
+def visit_usage_deps(deps, visited, value):
+  value_id = id(value)
+  if value_id not in visited and hasattr(value, 'usage_deps'):
+    visited.add(value_id)
+    value.usage_deps(deps, visited)

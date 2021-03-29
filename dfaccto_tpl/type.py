@@ -32,6 +32,9 @@ class Type(PackageElement):
     else:
       return False
 
+  def __hash__(self):
+    return id(self)
+
   @property
   def has_role(self):
     return True

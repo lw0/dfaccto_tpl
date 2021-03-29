@@ -2,7 +2,7 @@ from .assignable import ConstAssignable
 from .assignment import Assignment
 from .element import PackageElement
 from .role import Role
-from .util import safe_str
+from .util import safe_str, visit_usage_deps
 
 
 
@@ -40,4 +40,7 @@ class Constant(PackageElement, Assignment, ConstAssignable):
   def size_constant(self):
     return self._size_constant
 
+  def usage_deps(self, deps, visited):
+    PackageElement.usage_deps(self, deps, visited)
+    Assignment.usage_deps(self, deps, visited)
 

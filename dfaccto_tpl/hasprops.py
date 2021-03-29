@@ -1,4 +1,4 @@
-
+from .util import visit_usage_deps
 
 
 class HasProps:
@@ -52,5 +52,9 @@ class HasProps:
   @property
   def props(self):
     return self._props
+
+  def prop_deps(self, deps, visited):
+    for value in self._props.values():
+      visit_usage_deps(deps, visited, value)
 
 

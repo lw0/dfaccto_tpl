@@ -34,6 +34,10 @@ class Generic(EntityElement, Typed, ConstAssignable):
     except:
       return safe_str(self)
 
+  def usage_deps(self, deps, visited):
+    EntityElement.usage_deps(self, deps, visited)
+    Typed.usage_deps(self, deps, visited)
+
 
 class InstGeneric(EntityElement, Assignment):
   def __init__(self, generic, inst_entity):
@@ -65,4 +69,7 @@ class InstGeneric(EntityElement, Assignment):
     except:
       return safe_str(self)
 
+  def usage_deps(self, deps, visited):
+    EntityElement.usage_deps(self, deps, visited)
+    Assignment.usage_deps(self, deps, visited)
 
