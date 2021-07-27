@@ -69,6 +69,18 @@ class Role(IntFlag):
   def is_pass(self):
     return self.equals(Role.Pass)
   @property
+  def is_ms_input(self):
+    return self.equals(Role.Slave | Role.View)
+  @property
+  def is_ms_output(self):
+    return self.equals(Role.Master | Role.Pass)
+  @property
+  def is_sm_input(self):
+    return self.equals(Role.Master | Role.View)
+  @property
+  def is_sm_output(self):
+    return self.equals(Role.Pass | Role.Pass)
+  @property
   def is_bidir(self):
     return self.equals(Role.Bidir)
   @property

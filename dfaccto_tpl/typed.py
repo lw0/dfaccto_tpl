@@ -131,6 +131,26 @@ class Typed:
     return self._role.is_bidir
 
   @property
+  def is_ms_input(self):
+    return self._role.is_ms_input
+
+  @property
+  def is_ms_output(self):
+    return self._role.is_ms_output
+
+  @property
+  def is_sm_input(self):
+    return self._role.is_sm_input
+
+  @property
+  def is_sm_output(self):
+    return self._role.is_sm_output
+
+  @property
+  def is_bidir(self):
+    return self._role.is_bidir
+
+  @property
   def knows_complex(self):
     return self._role.knows_complex
 
