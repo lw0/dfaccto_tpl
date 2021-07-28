@@ -137,7 +137,7 @@ class Key:
     return ''.join((top_str, first_str, mode_str, rest_str))
 
   def __eq__(self, other):
-    return self._top == other._top and self._mode == other._mode and self._path == other._path
+    return self._top == getattr(other, '_top', None) and self._mode == getattr(other, '_mode', None) and self._path == getattr(other, '_path', None)
 
   def __hash__(self):
     return hash((self._top, self._mode, self._path))
