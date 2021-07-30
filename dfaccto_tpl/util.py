@@ -62,7 +62,7 @@ class IndexIter():
     self._len = len(lst)
 
   def __next__(self):
-    item = IndexedObj(next(self._iter), self._idx, len(self._lst))
+    item = IndexedObj(next(self._iter), self._idx, self._len)
     self._idx += 1
     return item
 
