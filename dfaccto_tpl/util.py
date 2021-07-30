@@ -55,20 +55,23 @@ class IndexedObj():
   def _first(self):
     return self._idx == 0
 
-
-class IndexWrapper():
+class IndexIter():
   def __init__(self, lst):
     self._iter = iter(lst)
-    self._lst = lst
     self._idx = 0
-
-  def __iter__(self):
-    return self
+    self._len = len(lst)
 
   def __next__(self):
     item = IndexedObj(next(self._iter), self._idx, len(self._lst))
     self._idx += 1
     return item
+
+class IndexWrapper():
+  def __init__(self, lst):
+    self._lst = lst
+
+  def __iter__(self):
+    return IndexIter(self._lst)
 
   @property
   def _len(self):
@@ -87,7 +90,7 @@ class Registry(abc.Iterable):
     self._idx_cache.clear()
 
   def __iter__(self):
-    return IndexWrapper(self._contents)
+    return IndexIter(self._contents)
 
   def __len__(self):
     return len(self._contents)

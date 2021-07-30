@@ -8,7 +8,7 @@ from .package import Package
 from .role import Role
 from .type import Type
 from .typed import Literal
-from .util import DFACCTOError
+from .util import DFACCTOError, IndexWrapper
 
 
 
@@ -80,6 +80,7 @@ class Frontend:
     self._package = None
     self._entity = None
     self._namespace = {
+      'List':      IndexWrapper,
       'Lit':       self.literal,
       'LitV':      self.literal_vector,
       'P':         partial(self.reference, RefKind.Package),
