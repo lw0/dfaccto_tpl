@@ -8,8 +8,8 @@ from .errors import TemplateError, ParserError, AbsentError
 
 _default_parser = Parser()
 
-def parse(template_str, name=None, **template_props):
-  return _default_parser.parse(template_str, name, **template_props)
+def parse(template_str, name=None, **props):
+  return _default_parser.parse(template_str, name, **props)
 
 
 def render(template_str, *context_items, **kwargs):

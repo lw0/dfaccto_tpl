@@ -39,9 +39,6 @@ def str_arg(arg, regex=re.compile('.*')):
 class Cmdline:
   KEY_CFGDIRS    = '_cfgdirs_'
   KEY_TPLDIRS    = '_tpldirs_'
-  KEY_STATDIRS   = '_statdirs_'
-  KEY_TPLSUFFIX  = '_tplsuffix_'
-  KEY_PARTSUFFIX = '_partsuffix_'
   KEY_ENTRY      = '_entry_'
   KEY_OUTDIR     = '_outdir_'
   KEY_DEBUG      = '_debug_'
@@ -85,29 +82,11 @@ class Cmdline:
         metavar='<cfgdir>',
         help='search for config scripts here (can appear more than once)')
 
-    # parser.add_argument('--staticdir', '-s', dest=cls.KEY_STATDIRS,
-    #     action='append',
-    #     type=partial(path_arg, dir=True, exist=True),
-    #     metavar='<cfgdir>',
-    #     help='search for static files here (can appear more than once)')
-
     parser.add_argument('--tpldir', '-t', dest=cls.KEY_TPLDIRS,
         action='append',
         type=partial(path_arg, dir=True, exist=True),
         metavar='<tpldir>',
         help='search for templates and partials here (can appear more than once)')
-
-    # parser.add_argument('--tpl-suffix', dest=cls.KEY_TPLSUFFIX,
-    #     action='store',
-    #     type=partial(str_arg, regex=re.compile('\S+')),
-    #     metavar='<tpl>',
-    #     help='files ending in <tpl> under <tpldir> are used as templates or partials')
-
-    # parser.add_argument('--part-suffix', dest=cls.KEY_PARTSUFFIX,
-    #     action='store',
-    #     type=partial(str_arg, regex=re.compile('\S+')),
-    #     metavar='<part>',
-    #     help='files ending in <part><tpl> under <tpldir> are used as partials')
 
     return parser.parse_args(namespace=cls())
 
@@ -155,21 +134,6 @@ class Cmdline:
 
   def tpldirs(self, module=None):
     return getattr(self._trymodule(module), type(self).KEY_TPLDIRS, [])
-
-  # def statdirs(self, module=None):
-  #   return getattr(self._trymodule(module), type(self).KEY_STATDIRS, [])
-
-  # def tplsuffix(self, module=None):
-  #   suffix = getattr(self._trymodule(module), type(self).KEY_TPLSUFFIX, None)
-  #   if suffix is None:
-  #     suffix = getattr(self._module(None), type(self).KEY_TPLSUFFIX, '.tpl')
-  #   return suffix
-
-  # def partsuffix(self, module=None):
-  #   suffix = getattr(self._trymodule(module), type(self).KEY_PARTSUFFIX, None)
-  #   if suffix is None:
-  #     suffix = getattr(self._module(None), type(self).KEY_PARTSUFFIX, '.part')
-  #   return suffix
 
   def entry(self):
     return getattr(self._globals, type(self).KEY_ENTRY)

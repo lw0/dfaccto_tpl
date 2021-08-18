@@ -16,24 +16,6 @@ class ContextRenderer:
     self._args = args
     self._templates = dict()
 
-  # def _load_templates(self):
-  #   for module in self._args.modules():
-  #     pattern = '*{}'.format(self._args.tplsuffix(module))
-  #     partsuffix = self._args.partsuffix(module)
-  #     for dir in self._args.tpldirs(module):
-  #       for tpl_file in dir.rglob(pattern):
-  #         tpl_name = str(tpl_file.relative_to(search_path))[:-len(tpl_suffix)]
-  #         is_partial = name.endswith(partsuffix)
-  #         tpl_content = tpl_file.read_text()
-  #         try:
-  #           tpl = parse(tpl_content, tpl_name, module=module)
-  #         except TemplateError as e:
-  #           raise DFACCTOError(str(e))
-  #         if name.endswith(partsuffix):
-  #           self._partials[(module, tpl_name)] = tpl
-  #         else:
-  #           self._templates[(module, tpl_name)] = tpl
-
   def _get_template(self, tpl_spec):
     if not isinstance(tpl_spec, ModuleRef):
       raise DFACCTOError('Error: invalid template specification "{}"'.format(tpl_spec))
@@ -79,14 +61,6 @@ class ContextRenderer:
       raise DFACCTOError('Error: would override existing file "{}"'.format(path))
     return path
 
-  # def _get_statpath(self, stat_spec):
-  #   if not isinstance(stat_spec, ModuleRef):
-  #     raise DFACCTOError('Error: invalid file specification "{}"'.format(stat_spec))
-  #   path = resolve_path(self._args.statdirs(stat_spec.module), stat_spec.name)
-  #   if path is None:
-  #     raise DFACCTOError('Error: Can not find static file "{}" in module {}'.format(stat_spec.name, stat_spec.module))
-  #   return path
-
   def empty(self):
     for item in self._args.outdir().iterdir():
       if item.is_dir():
@@ -101,10 +75,4 @@ class ContextRenderer:
       outpath.write_text(template.render(context, partial=self._get_partial))
     except TemplateError as e:
       raise DFACCTOError(str(e))
-
-  # def copy(self, stat_spec, out_spec):
-  #   inpath = self._get_statpath(stat_spec)
-  #   outpath = self._get_outpath(out_spec)
-  #   shutil.copy(inpath, outpath)
-
 
