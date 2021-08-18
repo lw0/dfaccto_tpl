@@ -38,8 +38,8 @@ def main():
     element_iter = chain((context,), context.packages.contents(), context.entities.contents())
     for element in element_iter:
       for tpl_spec,out_spec in element.props.get('templates', {}).items():
-        print_status(tpl_spec, out_spec, element)
         renderer.render(tpl_spec, out_spec, element)
+        print_status(tpl_spec, out_spec, element)
 
   except DFACCTOError as e:
     print(e, file=sys.stderr)
