@@ -6,9 +6,28 @@ from .renderbuffer import RenderBuffer
 
 class Template:
 
-  def __init__(self, content, name=None):
-    self._content = content
+  def __init__(self, name=None, **props):
     self._name = name or '<string>'
+    self._props = props
+    self._content = None
+
+  def __getattr__(self, key):
+    if key in self._props:
+      return self._props[key]
+    else:
+      raise AttributeError(key)
+
+  @property
+  def props(self):
+    return self._props
+
+  def setprops(self, **props):
+    self._props.update(props)
+
+
+  def setup(self, content):
+    self._content = content
+    return self
 
   def render_with(self, context, buf):
     for token in self._content:
@@ -45,7 +64,8 @@ class LiteralToken:
 class ValueToken:
   # {{key}}
   # {{&key}}
-  def __init__(self, key, verbatim=False):
+  def __init__(self, template, key, verbatim=False):
+    self._template = template
     self._key = key
     self._verbatim = verbatim
 
@@ -58,13 +78,14 @@ class ValueToken:
 
 class IndirectToken:
   # {{*key}}
-  def __init__(self, key, parser):
+  def __init__(self, template, key, parser):
+    self._template = template
     self._key = key
     self._parser = parser
 
   def render_with(self, context, buf):
     template_string = context.get_string(self._key, True)
-    template = self._parser.parse(template_string)
+    template = self._parser.parse(template_string, **self._template.props)
     buf.push_indent()
     template.render_with(context, buf)
     buf.pop_indent()
@@ -72,11 +93,12 @@ class IndirectToken:
 
 class PartialToken:
   # {{>name}}
-  def __init__(self, name):
+  def __init__(self, template, name):
+    self._template = template
     self._name = name
 
   def render_with(self, context, buf):
-    template = context.get_partial(self._name)
+    template = context.get_partial(self._name, self._template)
     if template is not None:
       buf.push_indent()
       template.render_with(context, buf)
@@ -90,7 +112,7 @@ class SectionToken:
   # {{?key}}...[{{|key}}...]{{/key}} (mode=Check)
   # {{!key}}...[{{|key}}...]{{/key}} (mode=Exist)
   # {{^key}}...{{/key}}              (mode=Loop)
-  def __init__(self, key, truthy_content, falsey_content, mode):
+  def __init__(self, template, key, truthy_content, falsey_content, mode):
     """
       mode
         Loop: Render truthy content with items of iterable-coerced key-value, and if empty falsey content with original context
@@ -98,6 +120,7 @@ class SectionToken:
         Check: Render truthy content with original context if key-value is truthy, and if falsey or absent render falsey content with original context
         Exist: Render truthy content with original context if key-value is present, and if absent render falsey content with original context
     """
+    self._template = template
     self.key = key
     self.truthy_content = truthy_content
     self.falsey_content = falsey_content

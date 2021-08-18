@@ -384,13 +384,14 @@ class Parser:
     while queue:
       yield queue.popleft()
 
-  def _parse(self, string):
+  def parse(self, string, name=None, **props):
     """
       Parse a template string into a token list ready for rendering
 
       raises ParserError for invalid token formats
       raises ParserError for inconsistent section tokens
     """
+    template = Template(name, **props)
     sections = SectionStack()
     last_pos = (1,1)
     try:
@@ -399,13 +400,13 @@ class Parser:
         if is_token:
           kind,param = content
           if kind == '':
-            sections.append_token(ValueToken(param))
+            sections.append_token(ValueToken(template, param))
           elif kind == '&':
-            sections.append_token(ValueToken(param, verbatim=True))
+            sections.append_token(ValueToken(template, param, verbatim=True))
           elif kind == '*':
-            sections.append_token(IndirectToken(param, self))
+            sections.append_token(IndirectToken(template, param, self))
           elif kind == '>':
-            sections.append_token(PartialToken(param))
+            sections.append_token(PartialToken(template, param))
           elif kind == '#':
             sections.push_normal(param, pos)
           elif kind == '=':
@@ -420,20 +421,13 @@ class Parser:
             sections.alternate(param, pos)
           elif kind == '/':
             key, truthy, falsey, mode = sections.pop(param)
-            token = SectionToken(key, truthy, falsey, mode)
+            token = SectionToken(template, key, truthy, falsey, mode)
             sections.append_token(token)
         else:
           sections.append_literal(content)
-      return sections.take()
+      return template.setup(sections.take())
     except ParserError as e:
       e.set_position(last_pos[0], last_pos[1])
-      raise e
-
-  def parse(self, string, name=None):
-    try:
-      return Template(self._parse(string), name)
-    except ParserError as e:
       e.set_source(name)
       raise e
-
 

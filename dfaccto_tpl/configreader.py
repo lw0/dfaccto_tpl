@@ -1,36 +1,62 @@
+from collections import namedtuple
 from pathlib import Path
 import sys
 import traceback
 
 from .context import Context
 from .frontend import Frontend
-from .util import DFACCTOError
+from .util import DFACCTOError, ModuleRef, resolve_path
 
+
+ExecEntry = namedtuple('ExecEntry', ['base', 'module'])
 
 
 class ConfigReader:
-  def __init__(self, context=None):
+  def __init__(self, args, context=None):
+    self._args = args
     self._context = context or Context()
     self._frontend = Frontend(self._context)
-    self._globals = {'Inc': self.read}
+    self._globals = {'Inc': self.read,
+                     'File': self.module_ref,
+                     'Part': self.partial_ref}
     self._globals.update(self._frontend.namespace)
     self._executed = set()
-    self._base_path = list()
+    self._stack = [ExecEntry(Path('.').resolve(), None)]
 
   @property
   def context(self):
     return self._context
 
-  def read(self, path):
-    if self._base_path:
-      path = self._base_path[-1] / path
-    path = Path(path).resolve()
+  def module_ref(self, name, mod=None):
+    module = self._stack[-1].module if mod is None else mod
+    return ModuleRef(module, name)
+
+  def partial_ref(self, name, mod=None):
+    module = self._stack[-1].module if mod is None else mod
+    return '{{{{>{}:{}}}}}'.format(module if module is not None else '', name)
+
+  def _resolve_cfg(self, name, abs=False):
+    if abs is False:
+      module = self._stack[-1].module
+      print(name)
+      path = self._stack[-1].base / name
+      if not path.exists():
+        raise DFACCTOError('Can not resolve relative script name "{}"'.format(name))
+    else:
+      module = self._stack[-1].module if abs is True else abs
+      path = resolve_path(self._args.cfgdirs(module), name)
+      if path is None:
+        raise DFACCTOError('Can not resolve absolute script name "{}" in module {}'.format(name, module))
+    return (path.resolve(), module)
+
+  def read(self, name, abs=False):
+    path, module = self._resolve_cfg(name, abs)
 
     if path in self._executed:
       return
     self._executed.add(path)
+    self._stack.append(ExecEntry(path.parent, module))
 
-    self._base_path.append(path.parent)
     try:
       code = None
       try:
@@ -46,5 +72,5 @@ class ConfigReader:
         msg = '{}\n  at [{} : {}]\n  "{}"'.format(e_msg, e_frame.filename, e_frame.lineno, e_frame.line)
         raise DFACCTOError(msg)
     finally:
-      self._base_path.pop()
+      self._stack.pop()
 

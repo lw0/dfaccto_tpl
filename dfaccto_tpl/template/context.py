@@ -30,10 +30,10 @@ class Context:
     self._escape = escape
     self._partial = partial
 
-  def get_partial(self, name):
+  def get_partial(self, name, template):
     partial = None
     if self._partial is not None:
-      partial = self._partial(name)
+      partial = self._partial(name, template)
     if partial is None and self._raise_on_absent:
       raise AbsentError('Can not resolve partial "{}"'.format(name))
     return partial

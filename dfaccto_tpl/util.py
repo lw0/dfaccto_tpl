@@ -1,6 +1,15 @@
 import collections.abc as abc
+from collections import namedtuple
 
 
+ModuleRef = namedtuple('ModuleRef', ['module', 'name'])
+
+def resolve_path(baselist, name):
+  for base in baselist:
+    path = base / name
+    if path.is_file():
+      return path
+  return None
 
 class DFACCTOError(Exception):
   def __init__(self, msg):

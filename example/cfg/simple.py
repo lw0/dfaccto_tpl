@@ -1,16 +1,17 @@
-Inc('simple_types.py')
+Inc('definitions.py', abs='lib')
 
 
 Ent('Inner',
     Generic('DataWidth',     T('Size')),
     Generic('PatternLength', T('Size')),
     Generic('Pattern',       T('Integer'), vector='PatternLength'),
-    PortS('hsIn',    T('Handshake', pkg='simple')),
-    PortM('hsOut',   T('Handshake', pkg='simple')),
-    PortI('dataIn',  T('Data', pkg='simple'), vector='DataWidth'),
-    PortO('dataOut', T('Data', pkg='simple'), vector='DataWidth'),
+    PortS('hsIn',    T('Handshake', pkg='types')),
+    PortM('hsOut',   T('Handshake', pkg='types')),
+    PortI('dataIn',  T('Data', pkg='types'), vector='DataWidth'),
+    PortO('dataOut', T('Data', pkg='types'), vector='DataWidth'),
     PortI('dummy',   T('Logic')),
-    PortO('done',    T('Logic')))
+    PortO('done',    T('Logic')),
+    x_templates={File('inner.vhd.tpl'): File('inner.vhd')})
 
 Ent('Barrier',
     Generic('Dummy',     T('Logic')),
@@ -18,8 +19,8 @@ Ent('Barrier',
     Generic('MaskCount', T('Size')),
     Generic('Mask',      T('Integer'), vector='MaskCount'),
     PortI('doneIn', T('Logic'), vector='PortCount'),
-    PortO('done',   T('Logic'),
-          x_depends=lambda e: e.ports['doneIn']))
+    PortO('done',   T('Logic'), x_depends=lambda e: e.ports['doneIn']),
+    x_templates={File('barrier.vhd.tpl'): File('barrier.vhd')})
 
 with Ent('Toplevel',
          Generic('DataWidth', T('Size')),
@@ -31,7 +32,7 @@ with Ent('Toplevel',
          PortI('dataIn',  T('Data'), vector='DataWidth'),
          PortO('dataOut', T('Data'), vector='DataWidth'),
          PortO('done',    T('Logic')),
-         x_templates={'entity.vhd': 'Toplevel.vhd'}):
+         x_templates={File('generic/entity.vhd.tpl', mod='lib'): File('Toplevel.vhd')}):
 
   Ins('Inner', 'mid',
       MapGeneric('Pattern', LitV(1, 2, 5)),
