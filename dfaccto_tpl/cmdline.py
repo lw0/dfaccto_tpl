@@ -42,7 +42,7 @@ class Cmdline:
   KEY_ENTRY      = '_entry_'
   KEY_OUTDIR     = '_outdir_'
   KEY_DEBUG      = '_debug_'
-  MODULE_KEYS = (KEY_CFGDIRS, KEY_TPLDIRS, KEY_STATDIRS, KEY_TPLSUFFIX, KEY_PARTSUFFIX)
+  MODULE_KEYS = (KEY_CFGDIRS, KEY_TPLDIRS)
   GLOBAL_KEYS = (KEY_ENTRY, KEY_OUTDIR, KEY_DEBUG)
 
   class SetModule(argparse.Action):
