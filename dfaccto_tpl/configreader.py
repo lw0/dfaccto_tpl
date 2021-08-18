@@ -38,7 +38,6 @@ class ConfigReader:
   def _resolve_cfg(self, name, abs=False):
     if abs is False:
       module = self._stack[-1].module
-      print(name)
       path = self._stack[-1].base / name
       if not path.exists():
         raise DFACCTOError('Can not resolve relative script name "{}"'.format(name))
