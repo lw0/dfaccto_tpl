@@ -37,6 +37,8 @@ def main(args):
         print('{:>24s} ---{:-^24s}---> {:<24s}'.format(tpl_name, element_name, out_name or tpl_name))
         renderer.render(tpl_name, element, out_name)
 
+    renderer.write_rendered()
+
   except DFACCTOError as e:
     print(e, file=sys.stderr)
     return 1

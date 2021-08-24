@@ -1,190 +1,337 @@
-import collections.abc as abc
 import re
+from functools import partial
+from collections import namedtuple
+from enum import Enum, auto
 
-from .util import DFACCTOAssert
+from .entity import Entity
+from .package import Package
 from .role import Role
 from .type import Type
-from .entity import Entity
-from .signal import Signal
-from .package import Package
+from .typed import Literal
+from .util import DFACCTOError, IndexWrapper
+
+
+
+PortDeclaration = namedtuple('PortDeclaration', ('role', 'name', 'type', 'size_str', 'label', 'props'), defaults=(None, None, ()))
+
+GenericDeclaration = namedtuple('GenericDeclaration', ('name', 'type', 'size_str', 'label', 'props'), defaults=(None, None, ()))
+
+PortAssignment = namedtuple('PortAssignment', ('name', 'to', 'props'), defaults=(()))
+
+GenericAssignment = namedtuple('GenericAssignment', ('name', 'to', 'props'), defaults=(()))
+
+
+class RefKind(Enum):
+  Package = auto()
+  Type = auto()
+  Constant = auto()
+  #Function = auto()
+  Entity = auto()
+  Generic = auto()
+  Signal = auto()
+
+
+class ContextWrapper:
+  def __init__(self, frontend, element):
+    self._frontend = frontend
+    self._element = element
+
+  def __getattr__(self, key):
+    return getattr(self._element, key)
+
+  def __str__(self):
+    return str(self._element)
+
+  def __enter__(self):
+    self._frontend.enter_context(self._element)
+
+  def __exit__(self, type, value, trackback):
+    self._frontend.leave_context()
+
+  def unwrap(self):
+    return self._element
 
 
 class Frontend:
 
-  # '<type_name>'
-  # '<pkg_name>.<type_name>'
-  TypePattern = re.compile('(?:(\w+)\.)?(\w+)')
+  NamePattern = re.compile('(\w+)')
+  @classmethod
+  def name_value(cls, value):
+    if not isinstance(value, str):
+      raise DFACCTOError('Name must be a string')
+    if m := cls.NamePattern.fullmatch(value):
+      return m.group(1)
+    else:
+      raise DFACCTOError('Invalid name "{}"'.format(value))
 
-  # g_<name>=None
-  # g_<name>=<value>
-  GenericPattern = re.compile('g_(\w+)')
-
-  # p<role>_<name>='<type>'
-  # p<role>_<name>=('<type>', '<size_generic_name>')
-  PortRolePattern = re.compile('p(\w)_(\w+)')
-
-  # p_<name>='<signal_name>'
-  # p_<name>=['<signal_name>', ... ]
-  PortConnectPattern = re.compile('p_(\w+)')
-
-  # x_<name>=<value>
-  # xt_<name>='<type_name>'
-  PropertyPattern = re.compile('x(t?)_(\w+)')
-
-
-  def __init__(self, context, *, entity=None, package=None):
-    self._context = context
-    self._entity = entity
-    self._package = package
-
-
-
-  def _resolve_generic(self, key, value):
-    m = type(self).GenericPattern.match(key)
-    if m:
-      name = m.group(1)
-      return (name, value)
-    return None
-
-  def _resolve_type(self, value):
-    m = type(self).TypePattern.match(value)
-    DFACCTOAssert(m,
-      'Invalid type specification "{}"'.format(value))
-    pkg_name = m.group(1)
-    type_name = m.group(2)
-    return self._context.get_type(type_name, pkg_name)
-
-  def _resolve_port_definition(self, key, value):
-    m = type(self).PortRolePattern.match(key)
-    if m:
-      role = Role.parse(m.group(1))
-      name = m.group(2)
-      DFACCTOAssert(role.is_port,
-        'Can not define port {} with non-port role {}'.format(name, role))
-      if isinstance(value, str):
-        port_type = self._resolve_type(value)
-        size_generic_name = None
+  PropPattern = re.compile('x_(\w+)')
+  @classmethod
+  def read_props(cls, directives):
+    props = list()
+    for key,val in directives.items():
+      if (m := cls.PropPattern.fullmatch(key)) is not None:
+        props.append((m.group(1), val))
       else:
-        port_type = self._resolve_type(value[0])
-        size_generic_name = value[1]
-      return (name, port_type.derive(role), size_generic_name)
-    return None
+        raise DFACCTOError('Invalid directive "{}"'.format(key))
+    return props
 
+  def __init__(self, context):
+    self._context = context
+    self._package = None
+    self._entity = None
+    self._namespace = {
+      'List':      IndexWrapper,
+      'Lit':       self.literal,
+      'LitV':      self.literal_vector,
+      'P':         partial(self.reference, RefKind.Package),
+      'T':         partial(self.reference, RefKind.Type),
+      'C':         partial(self.reference, RefKind.Constant),
+      'E':         partial(self.reference, RefKind.Entity),
+      'G':         partial(self.reference, RefKind.Generic),
+      'S':         partial(self.reference, RefKind.Signal),
+      'CV':        partial(self.vector_reference, RefKind.Constant),
+      'GV':        partial(self.vector_reference, RefKind.Generic),
+      'SV':        partial(self.vector_reference, RefKind.Signal),
+      'Gbl':       self.global_statement,
+      'Pkg':       self.package_declaration,
+      'TypeS':     partial(self.type_declaration, False),
+      'TypeC':     partial(self.type_declaration, True),
+      'Con':       self.constant_declaration,
+      'Ent':       self.entity_declaration,
+      'Generic':   self.generic_declaration,
+      'PortI':     partial(self.port_declaration, Role.Input),
+      'PortO':     partial(self.port_declaration, Role.Output),
+      'PortS':     partial(self.port_declaration, Role.Slave),
+      'PortM':     partial(self.port_declaration, Role.Master),
+      'PortV':     partial(self.port_declaration, Role.View),
+      'PortP':     partial(self.port_declaration, Role.Pass),
+      'Ins':       self.instance_declaration,
+      'MapPort':   self.port_assignment,
+      'MapGeneric': self.generic_assignment}
 
-  def _resolve_port_connect(self, key, value, index=None):
-    m = type(self).PortConnectPattern.match(key)
-    if m:
-      port_name = m.group(1)
-      if isinstance(value, str):
-        to = self._entity.get_connectable(value.format(index))
-      elif isinstance(value, abc.Sequence):
-        DFACCTOAssert(all(isinstance(sig_name, str) for sig_name in value),
-          "Vector Port Assignment requires signal names throughout")
-        to = [self._entity.get_connectable(sig_name.format(index)) for sig_name in value]
-      return (port_name, to)
-    return None
+  @property
+  def namespace(self):
+    return self._namespace
 
+  def enter_context(self, element):
+    if not self.in_global_context:
+      raise DFACCTOError('Can not nest contexts')
+    if isinstance(element, Package):
+      self._package = element
+    elif isinstance(element, Entity):
+      self._entity = element
+    else:
+      raise DFACCTOError('Can not use {} as new context'.format(element))
 
-  def _resolve_property(self, key, value):
-    m = type(self).PropertyPattern.match(key)
-    if m:
-      name = m.group(2)
-      if m.group(1) == 't': # expand type name
-        value = self._resolve_type(value)
-      return (name, value)
-    return None
+  def leave_context(self):
+    self._package = None
+    self._entity = None
 
-  def Gbl(self, **directives):
-    props = {}
-    for key,value in directives.items():
-      res = self._resolve_property(key, value)
-      if res is not None:
-        props[res[0]] = res[1]
-      #TODO-lw ?raise error for unrecognized directives?
-    self._context.props.update(props) # TODO-lw deep update, so that multiple Gbl(x_templates={...}) extend templates dir!
+  @property
+  def in_global_context(self):
+    return self._package is None and self._entity is None
 
+  @property
+  def in_package_context(self):
+    return self._package is not None
 
-  def Pkg(self, name, **directives):
-    props = {}
-    for key,value in directives.items():
-      res = self._resolve_property(key, value)
-      if res is not None:
-        props[res[0]] = res[1]
-      #TODO-lw ?raise error for unrecognized directives?
-    package = Package(self._context, name, props)
-    return Frontend(self._context, package=package)
+  @property
+  def in_entity_context(self):
+    return self._entity is not None
 
+  def _unpack_value(self, value, arg):
+    value = value(arg) if callable(value) else value
+    value = value.unwrap() if isinstance(value, ContextWrapper) else value
+    return value
 
-  def Typ(self, name, role, **directives):
-    DFACCTOAssert(self._package is not None,
-      'Typ() must be used in a package context')
-    props = {}
-    for key,value in directives.items():
-      res = self._resolve_property(key, value)
-      if res is not None:
-        props[res[0]] = res[1]
-      #TODO-lw ?raise error for unrecognized directives?
-    DFACCTOAssert(role.is_signal,
-      'Can not define type {} with port role "{}"'.format(name, role))
-    Type(self._package, name, role, **props)
+  def literal(self, val, type=None, expand=None):
+    if type is not None and not isinstance(type, Type):
+      raise DFACCTOError('Invalid literal type "{}"'.format(type))
+    if expand is not None and isinstance(val, str):
+      return Literal(val.format(expand), type)
+    else:
+      return Literal(val, type)
 
+  def literal_vector(self, *vals, type=None, expand=None):
+    if type is not None and not isinstance(type, Type):
+      raise DFACCTOError('Invalid literal type "{}"'.format(type))
+    if expand is not None:
+      return tuple(Literal(val.format(e), type) for e in expand for val in vals)
+    else:
+      return tuple(Literal(val, type) for val in vals)
 
-  def Ent(self, name, **directives):
-    generics = []
-    ports = []
-    props = {}
-    for key,value in directives.items():
-      res = self._resolve_generic(key, value)
-      if res is not None:
-        generics.append(res[0])
-        continue
-      res = self._resolve_port_definition(key, value)
-      if res is not None:
-        ports.append(res)
-        continue
-      res = self._resolve_property(key, value)
-      if res is not None:
-        props[res[0]] = res[1]
-    entity = Entity(self._context, name, **props)
-    for name in generics:
-      entity.generic(name)
-    for name,type,size_generic_name in ports:
-      entity.port(name, type, size_generic_name)
-    return Frontend(self._context, entity=entity)
+  def reference(self, kind, name, pkg=None, expand=None):
+    name = self.name_value(name.format(expand) if expand is not None else name)
+    if pkg is not None:
+      pkg = self.name_value(pkg.format(expand) if expand is not None else pkg)
+    if kind == RefKind.Package:
+      if pkg is not None:
+        raise DFACCTOError('Can not reference package "{}" within package "{}"'.format(name, pkg))
+      return ContextWrapper(self, self._context.get_package(name))
+    elif kind == RefKind.Type:
+      if self._package is not None:
+        return self._package.get_type(name, pkg)
+      else:
+        return self._context.get_type(name, pkg)
+    elif kind == RefKind.Constant:
+      if self._package is not None:
+        return self._package.get_constant(name, pkg)
+      else:
+        return self._context.get_constant(name, pkg)
+    elif kind == RefKind.Entity:
+      if pkg is not None:
+        raise DFACCTOError('Can not reference entity "{}" within package "{}"'.format(name, pkg))
+      return ContextWrapper(self, self._context.get_entity(name))
+    elif kind == RefKind.Generic:
+      if pkg is not None:
+        raise DFACCTOError('Can not reference generic "{}" within package "{}"'.format(name, pkg))
+      if self._entity is None:
+        raise DFACCTOError('Can not reference generic "{}" outside entity context'.format(name))
+      return self._entity.get_generic(name)
+    elif kind == RefKind.Signal:
+      if pkg is not None:
+        raise DFACCTOError('Can not reference port/signal "{}" within package "{}"'.format(name, pkg))
+      if self._entity is None:
+        raise DFACCTOError('Can not reference port/signal "{}" outside entity context'.format(name))
+      return self._entity.get_connectable(name)
+    else:
+      raise DFACCTOError('Invalid kind of reference "{}"'.format(kind))
 
-  def _instance_name(self, name, entity_name, index=None):
+  def vector_reference(self, kind, *names, pkg=None, expand=None):
+    if expand is not None:
+      return tuple(self.reference(kind, name, pkg, e) for e in expand for name in names)
+    else:
+      return tuple(self.reference(kind, name, pkg) for name in names)
+
+  def global_statement(self, **directives):
+    if not self.in_global_context:
+      raise DFACCTOError('Global statement must appear in the global context')
+    props = self.read_props(directives)
+
+    for name, value in props:
+      self._context.set_prop(name, self._unpack_value(value, self._context))
+    # TODO-lw deep update, so that multiple Gbl(x_templates={...}) extend templates dir!
+
+  def package_declaration(self, name, **directives):
+    if not self.in_global_context:
+      raise DFACCTOError('Package declaration must appear in the global context')
+    name = self.name_value(name)
+    props = self.read_props(directives)
+
+    package = self._context.add_package(name)
+    for name, value in props:
+      package.set_prop(name, self._unpack_value(value, package))
+
+    return ContextWrapper(self, package)
+
+  def type_declaration(self, is_complex, name, **directives):
+    if not self.in_package_context:
+      raise DFACCTOError('Type declaration must appear in a package context')
+    name = self.name_value(name)
+    props = self.read_props(directives)
+
+    type = self._package.add_type(name, is_complex)
+    for name, value in props:
+      type.set_prop(name, self._unpack_value(value, type))
+
+    return type
+
+  def constant_declaration(self, name, type, vector=None, value=None, **directives):
+    if not self.in_package_context:
+      raise DFACCTOError('Constant declaration must appear in a package context')
+    name = self.name_value(name)
+    if not isinstance(type, Type):
+      raise DFACCTOError('Invalid type "{}" in constant declaration'.format(type))
+    if vector is not None:
+      vector = self._package.get_constant(vector, self._package.name)
+    props = self.read_props(directives)
+
+    constant = self._package.add_constant(name, type, vector, value)
+    for name, value in props:
+      constant.set_prop(name, self._unpack_value(value, constant))
+
+    return constant
+
+  def entity_declaration(self, name, *decls, **directives):
+    if not self.in_global_context:
+      raise DFACCTOError('Entity declaration must appear in the global context')
+    name = self.name_value(name)
+    props = self.read_props(directives)
+    part_props = []
+
+    entity = self._context.add_entity(name)
+    for decl in decls:
+      if isinstance(decl, GenericDeclaration):
+        size = entity.get_generic(decl.size_str) if decl.size_str is not None else None
+        generic = entity.add_generic(decl.name, decl.type, size)
+        if decl.label is not None:
+          props.append(('x_g{}'.format(decl.label), generic))
+        if decl.props:
+          part_props.append((generic, decl.props))
+      elif isinstance(decl, PortDeclaration):
+        size = entity.get_generic(decl.size_str) if decl.size_str is not None else None
+        port = entity.add_port(decl.name, decl.role, decl.type, size)
+        if decl.label is not None:
+          props.append(('x_p{}'.format(decl.label), port))
+        if decl.props:
+          part_props.append((port, decl.props))
+      else:
+        raise DFACCTOError('Unexpected parameter "{}" in entity declaration'.format(decl))
+    for part, pprops in part_props:
+      for name, value in pprops:
+        part.set_prop(name, self._unpack_value(value, entity))
+    for name, value in props:
+      entity.set_prop(name, self._unpack_value(value, entity))
+
+    return ContextWrapper(self, entity)
+
+  def generic_declaration(self, name, type, vector=None, label=None, **directives):
+    if not isinstance(type, Type):
+      raise DFACCTOError('Invalid type "{}" in generic declaration'.format(type))
+    props = self.read_props(directives)
+    return GenericDeclaration(self.name_value(name), type, vector, label, props)
+
+  def port_declaration(self, role, name, type, vector=None, label=None, **directives):
+    if not isinstance(type, Type):
+      raise DFACCTOError('Invalid type "{}" in generic declaration'.format(type))
+    props = self.read_props(directives)
+    return PortDeclaration(role, self.name_value(name), type, vector, label, props)
+
+  def instance_declaration(self, entity_name, name, *decls, **directives):
+    if not self.in_entity_context:
+      raise DFACCTOError('Instance declaration must appear in an entity context')
+    entity_name = self.name_value(entity_name)
     if name is None:
       name = entity_name[0].lower() + entity_name[1:]
-    if index is not None:
-      name = '{}{:d}'.format(name, index)
-    return self._entity.instances.unique_name(name)
+    inst_name = self._entity.instances.unique_name(name)
+    props = self.read_props(directives)
+    part_props = []
 
-  def Ins(self, entity_name, **directives):
-    DFACCTOAssert(self._entity is not None,
-      'Ins() must be used in an entity context')
-    index = directives.get('index', None)
-    name = directives.get('name', None)
-    generics = []
-    ports = []
-    for key,value in directives.items():
-      res = self._resolve_generic(key, value)
-      if res is not None:
-        generics.append(res)
-        continue
-      res = self._resolve_port_connect(key, value, index)
-      if res is not None:
-        ports.append(res)
-        continue
-    entity = self._context.entities.lookup(entity_name)
-    inst_name = self._instance_name(name, entity_name, index)
+    entity = self._context.get_entity(entity_name)
     instance = entity.instantiate(self._entity, inst_name)
-    for name,value in generics:
-      instance.assign(name, value)
-    for name,to in ports:
-      instance.connect(name, to)
+    for decl in decls:
+      if isinstance(decl, GenericAssignment):
+        inst_generic = instance.assign_generic(decl.name, decl.to)
+        if decl.props:
+          part_props.append((inst_generic, decl.props))
+      elif isinstance(decl, PortAssignment):
+        inst_port = instance.assign_port(decl.name, decl.to)
+        if decl.props:
+          part_props.append((inst_port, decl.props))
+      else:
+        raise DFACCTOError('Unexpected parameter "{}" in instance declaration'.format(decl))
+    for part, props in part_props:
+      for name, value in props:
+        part.set_prop(name, self._unpack_value(value, instance))
+    for name, value in props:
+      instance.set_prop(name, self._unpack_value(value, instance))
 
-  def Sig(self, name, type_name=None): # TODO-lw consider removal
-    DFACCTOAssert(self._entity is not None,
-      'Sig() must be used in an entity context')
-    type = type_name and self._resolve_type(type_name)
-    Signal(self._entity, name, type)
+    return instance
+
+  def generic_assignment(self, name, to, **directives):
+    return GenericAssignment(self.name_value(name), to, self.read_props(directives))
+
+  def port_assignment(self, name, to, **directives):
+    return PortAssignment(self.name_value(name), to, self.read_props(directives))
+
+
