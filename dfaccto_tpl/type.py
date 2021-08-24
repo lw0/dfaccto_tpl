@@ -1,121 +1,58 @@
-from copy import copy
-from enum import Enum
-
-from .common import HasProps
-from .util import DFACCTOAssert
+from .element import PackageElement
 from .role import Role
+from .util import safe_str
 
 
-class Type(HasProps):
-  def __init__(self, package, name, role, **props):
-    HasProps.__init__(self, props)
-    self.context = package.context
-    self.package = package
-    self.name = name
-    self.role = role
+
+class Type(PackageElement):
+  def __init__(self, package, name, is_complex):
+    self._role = Role.Complex if is_complex else Role.Simple
+    PackageElement.__init__(self, package, name, 't_{name}{vec}{dir}', has_vector=True)
     self.package.types.register(self.name, self)
-    if self.role.is_simple:
-      self.identifier = 't_{}'.format(self.name)
-      self.identifier_v = 't_{}_v'.format(self.name)
+    decl_name = self.package.declarations.unique_name(self.name) # Avoid collisions with constant names
+    self.package.declarations.register(decl_name, self)
+    if self.is_simple:
       self.package.identifiers.register(self.identifier, self)
       self.package.identifiers.register(self.identifier_v, self)
-      self.identifiers = (self.identifier, self.identifier_v)
-    elif self.role.is_complex:
-      self.identifier_ms = 't_{}_ms'.format(self.name)
-      self.identifier_sm = 't_{}_sm'.format(self.name)
-      self.identifier_v_ms = 't_{}_v_ms'.format(self.name)
-      self.identifier_v_sm = 't_{}_v_sm'.format(self.name)
-      self.const_null_ms = 'c_{}Null_ms'.format(self.name)
-      self.const_null_sm = 'c_{}Null_sm'.format(self.name) #TODO-lw formalize this
+    elif self.is_complex:
       self.package.identifiers.register(self.identifier_ms, self)
       self.package.identifiers.register(self.identifier_sm, self)
       self.package.identifiers.register(self.identifier_v_ms, self)
       self.package.identifiers.register(self.identifier_v_sm, self)
-      self.package.identifiers.register(self.const_null_ms, self)
-      self.package.identifiers.register(self.const_null_sm, self)
-      self.identifiers = (self.identifier_ms, self.identifier_sm,
-                          self.identifier_v_ms, self.identifier_v_sm,
-                          self.const_null_ms, self.const_null_sm)
-    self.derived_from = None
-    self.derivates = {self.role: self}
 
   def __str__(self):
-    return '({}).t{}_{}'.format(self.package, self.role, self.name)
+    try:
+      return '({}).t_{}'.format(self.package, self.name)
+    except:
+      return safe_str(self)
 
-  def derive(self, role):
-    DFACCTOAssert(self.derived_from is None,
-      'Can not derive from already derived type {}'.format(self))
-    DFACCTOAssert(self.role.is_compatible(role),
-      'Can not derive incompatible role {} from type {}'.format(role, self))
-    if role in self.derivates:
-      return self.derivates[role]
-    derivate = copy(self)
-    derivate.role = role
-    derivate.derived_from = self
-    self.derivates[role] = derivate
-    return derivate
-
-  def is_compatible(self, other):
-    if self.name != other.name:
+  def __eq__(self, other):
+    if isinstance(other, Type):
+      return self._role == other._role and self.name == other.name
+    else:
       return False
-    return self.role.is_compatible(other.role)
+
+  def __hash__(self):
+    return id(self)
 
   @property
-  def base(self):
-    if self.derived_from is None:
-      return self
-    return self.derived_from
+  def has_role(self):
+    return True
 
   @property
-  def is_signal(self):
-    return self.role.is_signal
+  def role(self):
+    return self._role
 
   @property
-  def is_port(self):
-    return self.role.is_port
-
-  @property
-  def is_input(self):
-    return self.role.is_input
-
-  @property
-  def is_output(self):
-    return self.role.is_output
-
-  @property
-  def is_simple(self):
-    return self.role.is_simple
-
-  @property
-  def is_view(self):
-    return self.role.is_view
-
-  @property
-  def is_pass(self):
-    return self.role.is_pass
-
-  @property
-  def is_slave(self):
-    return self.role.is_slave
-
-  @property
-  def is_master(self):
-    return self.role.is_master
+  def knows_complex(self):
+    return self._role.knows_complex
 
   @property
   def is_complex(self):
-    return self.role.is_complex
+    return self._role.is_complex
 
   @property
-  def mode(self):
-    return self.role.mode
-
-  @property
-  def mode_ms(self):
-    return self.role.mode_ms
-
-  @property
-  def mode_sm(self):
-    return self.role.mode_sm
+  def is_simple(self):
+    return self._role.is_simple
 
 

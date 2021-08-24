@@ -1,14 +1,16 @@
-from .util import Registry, IndexWrapper
-from .signal import Signal
-from .port import Port
+from itertools import chain
+
+from .element import Element, PackageElement
 from .generic import Generic
-from .common import Instantiable, Element, HasProps
+from .port import Port
+from .signal import Signal
+from .util import Registry, IndexWrapper, safe_str, visit_usage_deps
 
 
-class EntityCommon(HasProps):
-  def __init__(self, props):
-    HasProps.__init__(self, props)
 
+class Entity(Element):
+  def __init__(self, context, name):
+    Element.__init__(self, context, name, '{name}')
     self._ports = Registry()
     self._generics = Registry()
     self._instances = Registry()
@@ -16,66 +18,98 @@ class EntityCommon(HasProps):
     self._connectables = Registry()
     self._identifiers = Registry()
 
+    self.context.entities.register(self.name, self)
+    self.context.identifiers.register(self.identifier, self)
+
+  def __str__(self):
+    try:
+      return self.name
+    except:
+      return safe_str(self)
+
+  @property
+  def has_role(self):
+    return False
+
+  @property
+  def is_instance(self):
+    return False
+
+  @property
+  def base(self):
+    return None
 
   @property
   def generics(self):
     return self._generics
 
   @property
-  def has_generics(self):
-    return len(self._generics) > 0
-
-
-  @property
   def ports(self):
     return self._ports
-
-  @property
-  def has_ports(self):
-    return len(self._ports) > 0
-
 
   @property
   def instances(self):
     return self._instances
 
   @property
-  def has_instances(self):
-    return len(self._instances) > 0
-
-
-  @property
   def signals(self):
     return self._signals
-
-  @property
-  def has_signals(self):
-    return len(self._signals) > 0
-
 
   @property
   def connectables(self):
     return self._connectables
 
   @property
-  def used_types(self):
-    types = set()
-    for conn in self._connectables.contents():
-      types.add(conn.type.base)
-    return IndexWrapper(types)
-
-
-  @property
   def identifiers(self):
     return self._identifiers
 
+  @property
+  def dependencies(self):
+    deps = set()
+    self.usage_deps(deps, set())
+    return IndexWrapper(deps)
 
-class InstEntity(EntityCommon, Instantiable, Element):
+  def usage_deps(self, deps, visited):
+    self.prop_deps(deps, visited)
+    for element in self._identifiers.contents():
+      visit_usage_deps(deps, visited, element)
+
+  def add_generic(self, name, type, size_generic):
+    return Generic(self, name, type, size_generic)
+
+  def add_port(self, name, role, type, size_generic):
+    return Port(self, name, role, type, size_generic)
+
+  def instantiate(self, parent, name):
+    return Instance(self, parent, name)
+
+  def get_generic(self, name):
+    if self.generics.has(name):
+      return self.generics.lookup(name)
+    else:
+      raise DFACCTOError(
+        'Entity {} does not have a generic "{}"'.format(self, name))
+
+  def get_assignable(self, name, pkg_name=None):
+    if pkg_name is None and self.generics.has(name):
+      return self.generics.lookup(name)
+    else:
+      return self.context.get_constant(name, pkg_name)
+
+  def get_connectable(self, name):
+    if self.connectables.has(name):
+      return self.connectables.lookup(name)
+    return Signal(self, name)
+
+
+class Instance(Element):
   def __init__(self, entity, parent, name):
     Element.__init__(self, entity.context, name, 'i_{name}')
-    Instantiable.__init__(self, entity)
-    EntityCommon.__init__(self, entity.props)
+    self._base = entity
     self._parent = parent
+    self._ports = Registry()
+    self._generics = Registry()
+    self._identifiers = Registry()
 
     for generic in entity.generics.contents():
       generic.instantiate(self)
@@ -86,45 +120,52 @@ class InstEntity(EntityCommon, Instantiable, Element):
     self._parent.identifiers.register(self.identifier, self)
 
   def __str__(self):
-    return '({}).i_{}:{}'.format(self.parent, self.name, self.base)
+    try:
+      return '({}).i_{}:{}'.format(self.parent, self.name, self.base)
+    except:
+      return safe_str(self)
+
+  @property
+  def has_role(self):
+    return False
+
+  @property
+  def is_instance(self):
+    return True
+
+  @property
+  def base(self):
+    return self._base
 
   @property
   def parent(self):
     return self._parent
 
-  def assign(self, generic_name, value):
-    self.generics.lookup(generic_name).assign(value)
+  @property
+  def generics(self):
+    return self._generics
 
-  def connect(self, port_name, to):
-    self.ports.lookup(port_name).connect(to)
+  @property
+  def ports(self):
+    return self._ports
 
+  @property
+  def identifiers(self):
+    return self._identifiers
 
-class Entity(EntityCommon, Instantiable, Element):
-  def __init__(self, context, name, **props):
-    Element.__init__(self, context, name, '{name}')
-    Instantiable.__init__(self)
-    EntityCommon.__init__(self, props)
+  def assign_generic(self, name, value):
+    inst_generic = self.generics.lookup(name)
+    inst_generic.assign(value)
+    return inst_generic
 
-    self.context.entities.register(self.name, self)
-    self.context.identifiers.register(self.identifier, self)
+  def assign_port(self, name, to):
+    inst_port = self.ports.lookup(name)
+    inst_port.assign(to)
+    return inst_port
 
-
-  def __str__(self):
-    return self.name
-
-  def generic(self, name):
-    return Generic(self, name)
-
-  def port(self, name, type, size_generic_name=None):
-    return Port(self, name, type, size_generic_name)
-
-  def instantiate(self, parent, name):
-    return InstEntity(self, parent, name)
-
-  def get_connectable(self, name):
-    if self.connectables.has(name):
-      return self.connectables.lookup(name)
-    return Signal(self, name)
-
+  def usage_deps(self, deps, visited):
+    self.prop_deps(deps, visited)
+    for element in self._identifiers.contents():
+      visit_usage_deps(deps, visited, element)
 
 

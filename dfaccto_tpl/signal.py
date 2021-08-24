@@ -1,11 +1,16 @@
-from .common import Connectable, EntityElement
+from .assignable import Assignable
+from .element import EntityElement
+from .role import Role
+from .typed import Typed
+from .util import safe_str
 
 
-class Signal(Connectable, EntityElement):
 
-  def __init__(self, entity, name, type=None, size=None):
+class Signal(EntityElement, Typed, Assignable):
+  def __init__(self, entity, name, type=None, vector=None, size=None):
     EntityElement.__init__(self, entity, name, 's_{name}{dir}')
-    Connectable.__init__(self, type, size, on_type_set=self._register_identifiers)
+    Typed.__init__(self, Role.Signal, type, vector, size, on_type_set=self._register_identifiers)
+    Assignable.__init__(self)
 
     self.entity.signals.register(self.name, self)
     self.entity.connectables.register(self.name, self)
@@ -18,14 +23,24 @@ class Signal(Connectable, EntityElement):
       self.entity.identifiers.register(self.identifier_sm, self)
 
   def __str__(self):
-    if self.is_vector:
-      if self.type is None:
-        return '({}).s_{}({})?'.format(self.entity, self.name, self.size)
+    try:
+      if self.knows_type:
+        type_str = ':{}'.format(self.type)
       else:
-        return '({}).s_{}({}):{}'.format(self.entity, self.name, self.size, self.type)
-    else:
-      if self.type is None:
-        return '({}).s_{}?'.format(self.entity, self.name)
+        type_str = '?'
+      if self.knows_vector:
+        if self.is_vector:
+          vec_str = '({})'.format(self.size if self.knows_size else '')
+        else:
+          vec_str = ''
       else:
-        return '({}).s_{}:{}'.format(self.entity, self.name, self.type)
+        vec_str = '?'
+      return '({}).s_{}{}{}'.format(self.entity, self.name, type_str, vec_str)
+    except:
+      return safe_str(self)
+
+  def usage_deps(self, deps, visited):
+    EntityElement.usage_deps(self, deps, visited)
+    Typed.usage_deps(self, deps, visited)
+
 

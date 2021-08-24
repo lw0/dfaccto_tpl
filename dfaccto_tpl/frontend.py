@@ -1,3 +1,4 @@
+import collections.abc as abc
 import re
 from functools import partial
 from collections import namedtuple

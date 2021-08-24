@@ -10,7 +10,6 @@ from .util import DFACCTOError, ModuleRef, resolve_path
 
 class ContextRenderer:
 
-
   def __init__(self, args):
     self._args = args
     self._templates = dict()
@@ -24,7 +23,6 @@ class ContextRenderer:
 
     tpl_path = resolve_path(self._args.tpldirs(tpl_spec.module), tpl_spec.name)
     if tpl_path is None:
-      breakpoint()
       raise DFACCTOError('Error: Can not find template "{}" in module {}'.format(tpl_spec.name, tpl_spec.module))
     tpl_name = '{}:{}'.format(tpl_spec.module or '', tpl_spec.name)
     tpl_content = tpl_path.read_text()
