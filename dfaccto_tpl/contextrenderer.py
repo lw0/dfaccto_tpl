@@ -77,6 +77,7 @@ class ContextRenderer:
       raise DFACCTOError(str(e))
 
   def write_rendered(self):
+    self._rendered.append('')
     if self._args.outlist() is not None:
       self._args.outlist().write_text('\n'.join(str(path) for path in self._rendered))
 

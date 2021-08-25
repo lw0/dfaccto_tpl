@@ -19,25 +19,32 @@ ifndef DFTPL_CFGDIRS
 endif
 
 ifndef DFTPL_TPLDIRS
-  $(warning `DFTPL_TPLDIRS` should be set to a list of directories with template files for the default module.)
+  $(info `DFTPL_TPLDIRS` should be set to a list of directories with template files for the default module.)
 endif
 
 ifndef DFTPL_MODULES
   $(info `DFTPL_MODULES` may be set to a list of module names to include non-default modules.)
 endif
 
-#TODO-lw also check $(DFTPL_CFGDIRS_$(mod)) and $(DFTPL_TPLDIRS_$(mod)) adaptively
+$(foreach mod,$(DFTPL_MODULES),\
+  $(if $(subst undefined,,$(flavor DFTPL_CFGDIRS_$(mod))),,\
+    $(info `DFTPL_CFGDIRS_$(mod)` should be set to a list of directories with template files for the `$(mod)` module)))
+
+$(foreach mod,$(DFTPL_MODULES),\
+  $(if $(subst undefined,,$(flavor DFTPL_TPLDIRS_$(mod))),,\
+    $(info `DFTPL_TPLDIRS_$(mod)` should be set to a list of directories with template files for the `$(mod)` module)))
+
 
 GENARGS  = -o $(DFTPL_GEN_DIR)
 ifdef DFTPL_GEN_LIST
 GENARGS += -l $(DFTPL_GEN_LIST)
 endif
 GENARGS += -e $(DFTPL_CONFIG)
-GENARGS += $(foreach dir,$(DFTPL_TPLDIRS),-t $(dir))
-GENARGS += $(foreach dir,$(DFTPL_CFGDIRS),-c $(dir))
+GENARGS += $(foreach tpl,$(DFTPL_TPLDIRS),-t $(tpl))
+GENARGS += $(foreach cfg,$(DFTPL_CFGDIRS),-c $(cfg))
 GENARGS += $(foreach mod,$(DFTPL_MODULES),-m $(mod) \
-              $(foreach dir,$(DFTPL_TPLDIRS_$(mod)),-t $(dir)) \
-              $(foreach dir,$(DFTPL_CFGDIRS_$(mod)),-c $(dir)))
+              $(foreach tpl,$(DFTPL_TPLDIRS_$(mod)),-t $(tpl)) \
+              $(foreach cfg,$(DFTPL_CFGDIRS_$(mod)),-c $(cfg)))
 
 
 #------------------------------------------------------------------------------
@@ -55,6 +62,7 @@ VPYTHON  = $(VENV_DIR)/bin/python
 
 .PHONY: usage
 usage:
+	@echo
 	@echo "Usage:"
 	@echo " make usage   - Display this info panel"
 	@echo " make info    - Display build variables"
@@ -74,6 +82,7 @@ usage:
 
 .PHONY: info
 info:
+	@echo
 	@echo "Variables:"
 	@echo " DFTPL_GEN_DIR  = $(DFTPL_GEN_DIR)"
 	@echo " DFTPL_GEN_LIST = $(DFTPL_GEN_LIST)"
@@ -103,15 +112,28 @@ $(VENV_DIR): .
 	@$(VPYTHON) -m pip install .
 	@echo
 
-.PHONY: tpl
-tpl: $(DFTPL_GEN_LIST)
 
-.PHONY: $(DFTPL_GEN_LIST)
-$(DFTPL_GEN_LIST): $(VENV_DIR)
+.PHONY: gen
+gen: $(VENV_DIR)
 	@echo
 	@echo "--- Generating hardware sources"
 	@mkdir -p $(DFTPL_GEN_DIR)
+ifdef DFTPL_GEN_LIST
+	@mkdir -p $(dir $(DFTPL_GEN_LIST))
+endif
 	@$(VPYTHON) -m dfaccto_tpl $(GENARGS)
+	@echo
+
+
+.PHONY: debug
+debug: $(VENV_DIR)
+	@echo
+	@echo "--- Generating hardware sources"
+	@mkdir -p $(DFTPL_GEN_DIR)
+ifdef DFTPL_GEN_LIST
+	@mkdir -p $(dir $(DFTPL_GEN_LIST))
+endif
+	@$(VPYTHON) -m dfaccto_tpl --debug $(GENARGS)
 	@echo
 
 

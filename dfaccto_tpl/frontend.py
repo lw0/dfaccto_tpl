@@ -266,14 +266,14 @@ class Frontend:
         size = entity.get_generic(decl.size_str) if decl.size_str is not None else None
         generic = entity.add_generic(decl.name, decl.type, size)
         if decl.label is not None:
-          props.append(('x_g{}'.format(decl.label), generic))
+          props.append((decl.label, generic))
         if decl.props:
           part_props.append((generic, decl.props))
       elif isinstance(decl, PortDeclaration):
         size = entity.get_generic(decl.size_str) if decl.size_str is not None else None
         port = entity.add_port(decl.name, decl.role, decl.type, size)
         if decl.label is not None:
-          props.append(('x_p{}'.format(decl.label), port))
+          props.append((decl.label, port))
         if decl.props:
           part_props.append((port, decl.props))
       else:

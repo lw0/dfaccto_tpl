@@ -111,6 +111,9 @@ class Registry(abc.Iterable):
       idx = self._names[key]
       return self._contents[idx]
 
+  def __str__(self):
+    return '[ {} ]'.format('\n  '.join(str(item) for item in self._contents))
+
   def register(self, name, obj):
     if name in self._names:
       msg = 'Name collision: "{}" is already defined'.format(name)
