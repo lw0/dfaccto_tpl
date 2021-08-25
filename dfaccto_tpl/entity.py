@@ -74,11 +74,11 @@ class Entity(Element):
     for element in self._identifiers.contents():
       visit_usage_deps(deps, visited, element)
 
-  def add_generic(self, name, type, size_generic):
-    return Generic(self, name, type, size_generic)
+  def add_generic(self, name, type, size_generic, default):
+    return Generic(self, name, type, size_generic, default)
 
-  def add_port(self, name, role, type, size_generic):
-    return Port(self, name, role, type, size_generic)
+  def add_port(self, name, role, type, size_generic, default):
+    return Port(self, name, role, type, size_generic, default)
 
   def instantiate(self, parent, name):
     return Instance(self, parent, name)

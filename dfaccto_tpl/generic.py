@@ -1,21 +1,21 @@
 from .assignable import ConstAssignable
 from .assignment import Assignment
 from .element import EntityElement
-from .typed import Typed
+from .typed import TypedWithDefault
 from .role import Role
 from .util import safe_str
 
 
 
-class Generic(EntityElement, Typed, ConstAssignable):
-  def __init__(self, entity, name, type, size_generic):
+class Generic(EntityElement, TypedWithDefault, ConstAssignable):
+  def __init__(self, entity, name, type, size_generic, default):
     if size_generic is not None:
       # Generics used for size must be simple scalars
       size_generic.role_equals(Role.Simple)
       size_generic.vector_equals(False)
 
     EntityElement.__init__(self, entity, name, 'g_{name}{dir}', inst_type=InstGeneric)
-    Typed.__init__(self, Role.Const, type, size_generic is not None, size_generic)
+    TypedWithDefault.__init__(self, Role.Const, type, size_generic is not None, size_generic, default)
     ConstAssignable.__init__(self)
 
     self.entity.generics.register(self.name, self)
@@ -27,16 +27,20 @@ class Generic(EntityElement, Typed, ConstAssignable):
 
   def __str__(self):
     try:
-      if self.is_vector:
-        return '({}).g_{}:{}({})'.format(self.entity, self.name, self.type, self.size)
+      if self.has_default:
+        def_str = ':={}'.format(str(self.default))
       else:
-        return '({}).g_{}:{}'.format(self.entity, self.name, self.type)
+        def_str = ''
+      if self.is_vector:
+        return '({}).g_{}:{}({}){}'.format(self.entity, self.name, self.type, self.size, def_str)
+      else:
+        return '({}).g_{}:{}{}'.format(self.entity, self.name, self.type, def_str)
     except:
       return safe_str(self)
 
   def usage_deps(self, deps, visited):
     EntityElement.usage_deps(self, deps, visited)
-    Typed.usage_deps(self, deps, visited)
+    TypedWithDefault.usage_deps(self, deps, visited)
 
 
 class InstGeneric(EntityElement, Assignment):

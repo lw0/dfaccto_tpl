@@ -237,6 +237,31 @@ class Typed:
       visit_usage_deps(deps, visited, self.size)
 
 
+class TypedWithDefault(Typed):
+  def __init__(self, role, type=None, vector=None, size=None, default=None, on_type_set=None):
+    Typed.__init__(self, role, type, vector, size, on_type_set)
+
+    self._default = None
+    self.set_default(default)
+
+  def set_default(self, default):
+    if default is None:
+      self._default = None
+    elif isinstance(default, ConstAssignable):
+      self._default = default
+      self.adapt(default)
+    else:
+      msg = 'Default value for {} must be either generic, constant or literal'
+      raise DFACCTOError(msg.format(self, default))
+
+  @property
+  def has_default(self):
+    return self._default is not None
+
+  @property
+  def default(self):
+    return self._default
+
 
 class Literal(Typed, ConstAssignable):
   def __init__(self, value, type=None):

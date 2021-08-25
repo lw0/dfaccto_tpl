@@ -1,12 +1,16 @@
 import collections.abc as abc
 from collections import namedtuple
+from pathlib import Path
 
 
 ModuleRef = namedtuple('ModuleRef', ['module', 'name'])
 
 def resolve_path(baselist, name):
+  subpath = Path(name)
+  if subpath.is_absolute():
+    return None
   for base in baselist:
-    path = base / name
+    path = base / subpath
     if path.is_file():
       return path
   return None

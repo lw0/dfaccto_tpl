@@ -13,9 +13,9 @@ from .util import DFACCTOError, IndexWrapper
 
 
 
-PortDeclaration = namedtuple('PortDeclaration', ('role', 'name', 'type', 'size_str', 'label', 'props'), defaults=(None, None, ()))
+PortDeclaration = namedtuple('PortDeclaration', ('role', 'name', 'type', 'size_str', 'default', 'label', 'props'), defaults=(None, None, ()))
 
-GenericDeclaration = namedtuple('GenericDeclaration', ('name', 'type', 'size_str', 'label', 'props'), defaults=(None, None, ()))
+GenericDeclaration = namedtuple('GenericDeclaration', ('name', 'type', 'size_str', 'default', 'label', 'props'), defaults=(None, None, ()))
 
 PortAssignment = namedtuple('PortAssignment', ('name', 'to', 'props'), defaults=(()))
 
@@ -264,14 +264,14 @@ class Frontend:
     for decl in decls:
       if isinstance(decl, GenericDeclaration):
         size = entity.get_generic(decl.size_str) if decl.size_str is not None else None
-        generic = entity.add_generic(decl.name, decl.type, size)
+        generic = entity.add_generic(decl.name, decl.type, size, decl.default)
         if decl.label is not None:
           props.append((decl.label, generic))
         if decl.props:
           part_props.append((generic, decl.props))
       elif isinstance(decl, PortDeclaration):
         size = entity.get_generic(decl.size_str) if decl.size_str is not None else None
-        port = entity.add_port(decl.name, decl.role, decl.type, size)
+        port = entity.add_port(decl.name, decl.role, decl.type, size, decl.default)
         if decl.label is not None:
           props.append((decl.label, port))
         if decl.props:
@@ -286,17 +286,17 @@ class Frontend:
 
     return ContextWrapper(self, entity)
 
-  def generic_declaration(self, name, type, vector=None, label=None, **directives):
+  def generic_declaration(self, name, type, vector=None, default=None, label=None, **directives):
     if not isinstance(type, Type):
       raise DFACCTOError('Invalid type "{}" in generic declaration'.format(type))
     props = self.read_props(directives)
-    return GenericDeclaration(self.name_value(name), type, vector, label, props)
+    return GenericDeclaration(self.name_value(name), type, vector, default, label, props)
 
-  def port_declaration(self, role, name, type, vector=None, label=None, **directives):
+  def port_declaration(self, role, name, type, vector=None, default=None, label=None, **directives):
     if not isinstance(type, Type):
       raise DFACCTOError('Invalid type "{}" in generic declaration'.format(type))
     props = self.read_props(directives)
-    return PortDeclaration(role, self.name_value(name), type, vector, label, props)
+    return PortDeclaration(role, self.name_value(name), type, vector, default, label, props)
 
   def instance_declaration(self, entity_name, name, *decls, **directives):
     if not self.in_entity_context:

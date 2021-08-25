@@ -1,15 +1,15 @@
 from .assignable import Assignable
+from .typed import TypedWithDefault
 from .element import EntityElement
 from .role import Role
-from .typed import Typed
 from .util import safe_str
 
 
 
-class Signal(EntityElement, Typed, Assignable):
-  def __init__(self, entity, name, type=None, vector=None, size=None):
+class Signal(EntityElement, TypedWithDefault, Assignable):
+  def __init__(self, entity, name, type=None, vector=None, size=None, default=None):
     EntityElement.__init__(self, entity, name, 's_{name}{dir}')
-    Typed.__init__(self, Role.Signal, type, vector, size, on_type_set=self._register_identifiers)
+    TypedWithDefault.__init__(self, Role.Signal, type, vector, size, default, on_type_set=self._register_identifiers)
     Assignable.__init__(self)
 
     self.entity.signals.register(self.name, self)
@@ -35,12 +35,16 @@ class Signal(EntityElement, Typed, Assignable):
           vec_str = ''
       else:
         vec_str = '?'
-      return '({}).s_{}{}{}'.format(self.entity, self.name, type_str, vec_str)
+      if self.has_default:
+        def_str = ':={}'.format(str(self.default))
+      else:
+        def_str = ''
+      return '({}).s_{}{}{}{}'.format(self.entity, self.name, type_str, vec_str, def_str)
     except:
       return safe_str(self)
 
   def usage_deps(self, deps, visited):
     EntityElement.usage_deps(self, deps, visited)
-    Typed.usage_deps(self, deps, visited)
+    TypedWithDefault.usage_deps(self, deps, visited)
 
 

@@ -2,20 +2,20 @@ from .assignable import Assignable
 from .assignment import Assignment
 from .element import EntityElement
 from .role import Role
-from .typed import Typed
+from .typed import TypedWithDefault
 from .util import DFACCTOError, safe_str, IndexWrapper
 
 
 
-class Port(EntityElement, Typed, Assignable):
-  def __init__(self, entity, name, role, type, size_generic):
+class Port(EntityElement, TypedWithDefault, Assignable):
+  def __init__(self, entity, name, role, type, size_generic, default):
     if size_generic is not None:
       # Generics used for size must be simple scalars
       size_generic.role_equals(Role.Simple)
       size_generic.vector_equals(False)
 
     EntityElement.__init__(self, entity, name, 'p{mode}_{name}{dir}', inst_type=InstPort)
-    Typed.__init__(self, role, type, size_generic is not None, size_generic)
+    TypedWithDefault.__init__(self, role, type, size_generic is not None, size_generic, default)
     Assignable.__init__(self)
 
     self.entity.ports.register(self.name, self)
@@ -28,16 +28,20 @@ class Port(EntityElement, Typed, Assignable):
 
   def __str__(self):
     try:
-      if self.is_vector:
-        return '({}).p_{}:{}({})'.format(self.entity, self.name, self.type, self.size)
+      if self.has_default:
+        def_str = ':={}'.format(str(self.default))
       else:
-        return '({}).p_{}:{}'.format(self.entity, self.name, self.type)
+        def_str = ''
+      if self.is_vector:
+        return '({}).p_{}:{}({}){}'.format(self.entity, self.name, self.type, self.size, def_str)
+      else:
+        return '({}).p_{}:{}{}'.format(self.entity, self.name, self.type, def_str)
     except:
       return safe_str(self)
 
   def usage_deps(self, deps, visited):
     EntityElement.usage_deps(self, deps, visited)
-    Typed.usage_deps(self, deps, visited)
+    TypedWithDefault.usage_deps(self, deps, visited)
 
 
 class InstPort(EntityElement, Assignment):
