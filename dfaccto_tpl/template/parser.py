@@ -264,12 +264,12 @@ class Parser:
                                                                  start=re.escape(start_delim),
                                                                  stop=re.escape(end_delim))
     self._split_pattern = re.compile(split_pat)
-    self._types = ('', '&', '*', '#', '=', '?', '!', '|', '^', '/', '>')
+    self._types = ('', '&', '*', '#', '=', '?', '!', '|', '^', '/', '>', ';')
     self._key_types = ('', '&', '*', '#', '=', '?', '!', '|', '^', '/')
-    self._standalone_types = ('#', '=', '?', '!', '|', '^', '/')
+    self._standalone_types = ('#', '=', '?', '!', '|', '^', '/', ';')
     type_pat = r'[{chars}]{quant}'.format(chars=re.escape(''.join(self._types)),
                                           quant='?' if '' in self._types else '')
-    self._token_pattern = re.compile(r'({type})\s*(\S+)\s*'.format(type=type_pat))
+    self._token_pattern = re.compile(r'({type})\s*(\S|\S.*\S)\s*'.format(type=type_pat))
     self._space_pattern = re.compile(r'[ \t]+')
     # self._trailnl_pattern = re.compile(r'{nl}$'.format(nl=newline))
 
@@ -423,6 +423,8 @@ class Parser:
             key, truthy, falsey, mode = sections.pop(param)
             token = SectionToken(template, key, truthy, falsey, mode)
             sections.append_token(token)
+          elif kind == ';':
+            pass # ignore the comment token
         else:
           sections.append_literal(content)
       return template.setup(sections.take())

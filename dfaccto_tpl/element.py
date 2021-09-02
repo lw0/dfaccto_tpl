@@ -72,6 +72,9 @@ class Element(HasProps):
                                       mode=self.role.cmode_sm or '',
                                       vec='_v', dir='_sm')
 
+  def usage_deps(self, deps, visited):
+    self.prop_deps(deps, visited)
+
 
 class EntityElement(Element):
   def __init__(self, entity, name, ident_fmt, base=None, inst_type=None):

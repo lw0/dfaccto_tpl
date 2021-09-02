@@ -48,13 +48,14 @@ class Package(Element):
   def dependencies(self):
     deps = set()
     self.usage_deps(deps, set())
+    deps.discard(self)
     return IndexWrapper(deps)
 
   def usage_deps(self, deps, visited):
     self.prop_deps(deps, visited)
     for element in self._identifiers.contents():
       visit_usage_deps(deps, visited, element)
-    deps.discard(self)
+    deps.add(self)
 
   def add_type(self, name, is_complex):
     return Type(self, name, is_complex)
