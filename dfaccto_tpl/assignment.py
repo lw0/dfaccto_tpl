@@ -28,8 +28,14 @@ class Assignment(Typed):
 
   @property
   def assignments(self):
-    if isinstance(self._value, abc.Sequence):
+    if isinstance(self._value, abc.Sequence) and len(self._value) > 0:
       return IndexWrapper(self._value)
+    return None
+
+  @property
+  def assignempty(self):
+    if isinstance(self._value, abc.Sequence) and len(self._value) == 0:
+      return True
     return None
 
   def assign(self, value):
@@ -52,9 +58,12 @@ class Assignment(Typed):
         msg = 'List assignment to {} must only contain assignable elements'
         raise DFACCTOError(msg.format(self))
       vec = len(value)
-      for idx,part in enumerate(value):
-        self.adapt(part, part_of=vec)
-        part.assigned_to(self, idx)
+      if vec == 0:
+        self.adapt(None, part_of=vec)
+      else:
+        for idx,part in enumerate(value):
+          self.adapt(part, part_of=vec)
+          part.assigned_to(self, idx)
     else:
       msg = 'Assignment to {} must be an assignable element or list of such'
       raise DFACCTOError(msg.format(self))

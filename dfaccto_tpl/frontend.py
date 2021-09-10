@@ -21,6 +21,7 @@ PortAssignment = namedtuple('PortAssignment', ('name', 'to', 'props'), defaults=
 
 GenericAssignment = namedtuple('GenericAssignment', ('name', 'to', 'props'), defaults=(()))
 
+ContextItem = namedtuple('ContextItem', ('kind', 'item'))
 
 class RefKind(Enum):
   Package = auto()
@@ -80,6 +81,7 @@ class Frontend:
     self._context = context
     self._package = None
     self._entity = None
+    self._stack = list()
     self._namespace = {
       'List':      IndexWrapper,
       'Lit':       self.literal,
@@ -115,8 +117,12 @@ class Frontend:
     return self._namespace
 
   def enter_context(self, element):
-    if not self.in_global_context:
-      raise DFACCTOError('Can not nest contexts')
+    if self.in_package_context:
+      self._stack.append(ContextItem('package', self._package))
+      self._package = None
+    if self.in_entity_context:
+      self._stack.append(ContextItem('entity', self._entity))
+      self._entity = None
     if isinstance(element, Package):
       self._package = element
     elif isinstance(element, Entity):
@@ -127,6 +133,14 @@ class Frontend:
   def leave_context(self):
     self._package = None
     self._entity = None
+    if len(self._stack):
+      item = self._stack.pop()
+      if item.kind == 'package':
+        self._package = item.item
+      elif item.kind == 'entity':
+        self._entity = item.item
+      else:
+        raise DFACCTOError('Invalid item on context stack')
 
   @property
   def in_global_context(self):
@@ -205,8 +219,6 @@ class Frontend:
       return tuple(self.reference(kind, name, pkg) for name in names)
 
   def global_statement(self, **directives):
-    if not self.in_global_context:
-      raise DFACCTOError('Global statement must appear in the global context')
     props = self.read_props(directives)
 
     for name, value in props:
@@ -214,8 +226,6 @@ class Frontend:
     # TODO-lw deep update, so that multiple Gbl(x_templates={...}) extend templates dir!
 
   def package_declaration(self, name, **directives):
-    if not self.in_global_context:
-      raise DFACCTOError('Package declaration must appear in the global context')
     name = self.name_value(name)
     props = self.read_props(directives)
 
@@ -254,8 +264,6 @@ class Frontend:
     return constant
 
   def entity_declaration(self, name, *decls, **directives):
-    if not self.in_global_context:
-      raise DFACCTOError('Entity declaration must appear in the global context')
     name = self.name_value(name)
     props = self.read_props(directives)
     part_props = []
